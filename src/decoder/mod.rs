@@ -1,11 +1,12 @@
-use std::path::Path;
+use std::path::PathBuf;
 
-use tracing::info;
+use anyhow::Result;
 
 mod mp4;
 
 #[tracing::instrument]
-pub fn decode(path: &Path) {
-    info!("decoding");
-    let _data = mp4::extract(path);
+pub fn decode(p: PathBuf) -> Result<()> {
+    mp4::extract(p)?;
+
+    Ok(())
 }
