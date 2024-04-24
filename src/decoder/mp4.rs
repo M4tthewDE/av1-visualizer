@@ -8,25 +8,21 @@ use tracing::info;
 
 // https://github.com/alfg/mp4/blob/master/atom/box.go#L99
 #[tracing::instrument(skip_all)]
-pub fn extract(p: PathBuf) -> Result<()> {
+pub fn extract(p: PathBuf) -> Result<Vec<u8>> {
     let data = std::fs::read(p)?;
     info!("loaded {} bytes", data.len());
 
     let mut cursor = Cursor::new(data);
 
     loop {
-        match read_box(&mut cursor) {
-            Ok(_) => {}
-            Err(err) => {
-                info!("finished reading: {err:?}");
-                return Ok(());
-            }
+        if let Some(data) = read_box(&mut cursor)? {
+            return Ok(data);
         }
     }
 }
 
 #[tracing::instrument(skip_all)]
-fn read_box(c: &mut Cursor<Vec<u8>>) -> Result<()> {
+fn read_box(c: &mut Cursor<Vec<u8>>) -> Result<Option<Vec<u8>>> {
     let mut box_size = [0u8; 4];
     c.read_exact(&mut box_size)?;
     let box_size = u32::from_be_bytes(box_size);
@@ -36,7 +32,10 @@ fn read_box(c: &mut Cursor<Vec<u8>>) -> Result<()> {
     let box_type = String::from_utf8(box_type.to_vec())?;
 
     match box_type.as_str() {
-        "ftyp" => ftyp(c, box_size as usize),
+        "ftyp" => {
+            ftyp(c, box_size as usize)?;
+            Ok(None)
+        }
         typ => bail!("TODO: {typ:?}"),
     }
 }
@@ -53,7 +52,7 @@ fn ftyp(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<()> {
     info!("major_brand: {major_brand}, minor_version: {minor_version}",);
 
     let mut brands = Vec::new();
-    for _ in 0..(size - 8) / 8 {
+    for _ in 0..size / 8 {
         let mut brand = [0u8; 4];
         c.read_exact(&mut brand)?;
         brands.push(String::from_utf8(brand.to_vec())?);

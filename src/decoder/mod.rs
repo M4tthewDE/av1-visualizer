@@ -6,7 +6,7 @@ mod mp4;
 
 #[tracing::instrument]
 pub fn decode(p: PathBuf) -> Result<()> {
-    mp4::extract(p)?;
+    let _data = mp4::extract(p)?;
 
     Ok(())
 }
