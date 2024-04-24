@@ -6,9 +6,10 @@ use std::{
 use anyhow::{bail, Result};
 use tracing::info;
 
-use self::ftyp::Ftyp;
+use self::{ftyp::Ftyp, moov::Moov};
 
 mod ftyp;
+mod moov;
 
 // reference:
 // https://github.com/alfg/mp4/blob/master/atom/box.go#L99
@@ -16,6 +17,7 @@ mod ftyp;
 #[derive(Clone, Debug, Default)]
 pub struct Mp4 {
     ftyp: Ftyp,
+    moov: Moov,
 }
 
 impl Mp4 {
@@ -44,6 +46,7 @@ impl Mp4 {
 
             match box_type.as_str() {
                 "ftyp" => self.ftyp = ftyp::ftyp(&mut c, box_size as usize)?,
+                "moov" => self.moov = moov::moov(&mut c, box_size as usize)?,
                 typ => bail!("box type {typ:?} not implemented"),
             }
 
