@@ -46,17 +46,17 @@ pub fn parse_mvhd(c: &mut Cursor<Vec<u8>>) -> Result<Mvhd> {
     c.set_position(c.position() + 10);
 
     let mut matrix = [0_u32; 9];
-    for i in 0..9 {
-        let mut m = [0u8; 4];
-        c.read_exact(&mut m)?;
-        matrix[i] = u32::from_be_bytes(m);
+    for m in &mut matrix {
+        let mut val = [0u8; 4];
+        c.read_exact(&mut val)?;
+        *m = u32::from_be_bytes(val);
     }
 
     let mut pre_defined = [0_u32; 6];
-    for i in 0..6 {
-        let mut m = [0u8; 4];
-        c.read_exact(&mut m)?;
-        pre_defined[i] = u32::from_be_bytes(m);
+    for p in &mut pre_defined {
+        let mut val = [0u8; 4];
+        c.read_exact(&mut val)?;
+        *p = u32::from_be_bytes(val);
     }
 
     let mut next_track_id = [0u8; 4];
