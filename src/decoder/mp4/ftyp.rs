@@ -3,6 +3,10 @@ use std::io::{Cursor, Read};
 use tracing::info;
 
 /// Identifies the specifications to which this file complies.
+///
+/// Box Type: 'ftyp'
+/// Mandatory: Yes
+/// Quantity: Exactly one
 #[derive(Clone, Debug, Default)]
 pub struct Ftyp {
     /// Printable four-character code, registered with ISO, that identifies a precise specification
