@@ -12,6 +12,7 @@ mod ftyp;
 mod moov;
 mod mvhd;
 mod tkhd;
+mod trak;
 
 // reference:
 // https://b.goeswhere.com/ISO_IEC_14496-12_2015.pdf

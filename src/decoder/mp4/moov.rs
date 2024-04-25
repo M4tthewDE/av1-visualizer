@@ -5,24 +5,24 @@ use anyhow::bail;
 
 use super::{
     mvhd::{self, Mvhd},
-    tkhd::{self, Tkhd},
+    trak::Trak,
 };
 
 #[derive(Clone, Debug, Default)]
 pub struct Moov {
     pub mvhd: Mvhd,
-    pub tkhd: Tkhd,
+    pub traks: Vec<Trak>,
 }
 
 #[tracing::instrument(skip_all)]
 pub fn moov(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Moov> {
     let mut mvhd = None;
-    let mut tkhd = None;
+    let mut traks = Vec::new();
 
     loop {
         let mut box_size = [0u8; 4];
         c.read_exact(&mut box_size)?;
-        let _box_size = u32::from_be_bytes(box_size);
+        let box_size = u32::from_be_bytes(box_size);
 
         let mut box_type = [0u8; 4];
         c.read_exact(&mut box_type)?;
@@ -30,7 +30,7 @@ pub fn moov(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Moov> {
 
         match box_type.as_str() {
             "mvhd" => mvhd = Some(mvhd::parse_mvhd(c)?),
-            "tkhd" => tkhd = Some(tkhd::parse_tkhd(c)?),
+            "trak" => traks.push(Trak::new(c, box_size as usize)?),
             typ => bail!("box type {typ:?} not implemented"),
         }
 
@@ -39,8 +39,12 @@ pub fn moov(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Moov> {
         }
     }
 
+    if traks.is_empty() {
+        bail!("at least one trak required in moov");
+    }
+
     Ok(Moov {
         mvhd: mvhd.context("no mvhd found")?,
-        tkhd: tkhd.context("no tkhd found")?,
+        traks,
     })
 }

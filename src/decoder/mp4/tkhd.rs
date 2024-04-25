@@ -21,67 +21,69 @@ pub struct Tkhd {
     pub height: f64,
 }
 
-#[tracing::instrument(skip_all)]
-pub fn parse_tkhd(c: &mut Cursor<Vec<u8>>) -> Result<Tkhd> {
-    let mut version = [0u8; 1];
-    c.read_exact(&mut version)?;
+impl Tkhd {
+    #[tracing::instrument(skip_all)]
+    pub fn new(c: &mut Cursor<Vec<u8>>) -> Result<Tkhd> {
+        let mut version = [0u8; 1];
+        c.read_exact(&mut version)?;
 
-    let mut flags = [0u8; 3];
-    c.read_exact(&mut flags)?;
+        let mut flags = [0u8; 3];
+        c.read_exact(&mut flags)?;
 
-    let mut creation_time = [0u8; 4];
-    c.read_exact(&mut creation_time)?;
+        let mut creation_time = [0u8; 4];
+        c.read_exact(&mut creation_time)?;
 
-    let mut modification_time = [0u8; 4];
-    c.read_exact(&mut modification_time)?;
+        let mut modification_time = [0u8; 4];
+        c.read_exact(&mut modification_time)?;
 
-    let mut id = [0u8; 4];
-    c.read_exact(&mut id)?;
+        let mut id = [0u8; 4];
+        c.read_exact(&mut id)?;
 
-    c.set_position(c.position() + 4);
+        c.set_position(c.position() + 4);
 
-    let mut duration = [0u8; 4];
-    c.read_exact(&mut duration)?;
+        let mut duration = [0u8; 4];
+        c.read_exact(&mut duration)?;
 
-    let mut layer = [0u8; 2];
-    c.read_exact(&mut layer)?;
+        let mut layer = [0u8; 2];
+        c.read_exact(&mut layer)?;
 
-    let mut alternate_group = [0u8; 2];
-    c.read_exact(&mut alternate_group)?;
+        let mut alternate_group = [0u8; 2];
+        c.read_exact(&mut alternate_group)?;
 
-    let mut volume = [0u8; 2];
-    c.read_exact(&mut volume)?;
+        let mut volume = [0u8; 2];
+        c.read_exact(&mut volume)?;
 
-    c.set_position(c.position() + 10);
+        c.set_position(c.position() + 10);
 
-    let mut matrix = [0_u32; 9];
-    for m in &mut matrix {
-        let mut val = [0u8; 4];
-        c.read_exact(&mut val)?;
-        *m = u32::from_be_bytes(val);
+        let mut matrix = [0_u32; 9];
+        for m in &mut matrix {
+            let mut val = [0u8; 4];
+            c.read_exact(&mut val)?;
+            *m = u32::from_be_bytes(val);
+        }
+
+        let mut width = [0u8; 4];
+        c.read_exact(&mut width)?;
+
+        let mut height = [0u8; 4];
+        c.read_exact(&mut height)?;
+
+        let tkhd = Tkhd {
+            version: version[0],
+            flags,
+            creation_time: u32::from_be_bytes(creation_time),
+            modification_time: u32::from_be_bytes(modification_time),
+            id: u32::from_be_bytes(id),
+            duration: u32::from_be_bytes(duration),
+            layer: u16::from_be_bytes(layer),
+            alternate_group: u16::from_be_bytes(alternate_group),
+            volume: fixed16(volume),
+            matrix,
+            width: fixed32(width),
+            height: fixed32(height),
+        };
+        info!("tkhd: {tkhd:?}");
+
+        Ok(tkhd)
     }
-
-    let mut width = [0u8; 4];
-    c.read_exact(&mut width)?;
-
-    let mut height = [0u8; 4];
-    c.read_exact(&mut height)?;
-
-    let tkhd = Tkhd {
-        version: version[0],
-        flags,
-        creation_time: u32::from_be_bytes(creation_time),
-        modification_time: u32::from_be_bytes(modification_time),
-        id: u32::from_be_bytes(id),
-        duration: u32::from_be_bytes(duration),
-        layer: u16::from_be_bytes(layer),
-        alternate_group: u16::from_be_bytes(alternate_group),
-        volume: fixed16(volume),
-        matrix,
-        width: fixed32(width),
-        height: fixed32(height),
-    };
-    info!("tkhd: {tkhd:?}");
-
-    Ok(tkhd)
 }
