@@ -2,15 +2,16 @@ use anyhow::Result;
 use std::io::{Cursor, Read};
 use tracing::info;
 
-/// Allows the reader to determine whether this is a type of file that the reader understands.
-/// See the [Apple documentation](https://developer.apple.com/documentation/quicktime-file-format/file_type_compatibility_atom) for more information.
+/// Identifies the specifications to which this file complies.
 #[derive(Clone, Debug, Default)]
 pub struct Ftyp {
-    /// represents the file format code
+    /// Printable four-character code, registered with ISO, that identifies a precise specification
     pub major_brand: String,
-    /// indicates the file format specification version
+
+    /// Informative integer for the minor version of the major brand
     pub minor_version: u32,
-    /// compatible file formats
+
+    /// Compatible brand specifications
     pub compatible_brands: Vec<String>,
 }
 
