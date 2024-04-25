@@ -2,13 +2,14 @@ use std::io::{Cursor, Read};
 
 use anyhow::{bail, Context, Result};
 
-use super::{edts::Edts, tkhd::Tkhd, tref::Tref};
+use super::{edts::Edts, mdia::Mdia, tkhd::Tkhd, tref::Tref};
 
 #[derive(Clone, Debug, Default)]
 pub struct Trak {
     pub tkhd: Tkhd,
     pub edts: Option<Edts>,
     pub tref: Option<Tref>,
+    pub mdia: Mdia,
 }
 
 impl Trak {
@@ -17,6 +18,7 @@ impl Trak {
         let mut tkhd = None;
         let mut edts = None;
         let mut tref = None;
+        let mut mdia = None;
         loop {
             let mut box_size = [0u8; 4];
             c.read_exact(&mut box_size)?;
@@ -30,6 +32,7 @@ impl Trak {
                 "tkhd" => tkhd = Some(Tkhd::new(c)?),
                 "edts" => edts = Some(Edts::new(c)?),
                 "tref" => tref = Some(Tref::new(c, box_size as usize)?),
+                "mdia" => mdia = Some(Mdia::new(c, box_size as usize)?),
                 typ => bail!("box type {typ:?} not implemented"),
             }
 
@@ -42,6 +45,7 @@ impl Trak {
             tkhd: tkhd.context("no tkhd found")?,
             edts,
             tref,
+            mdia: mdia.context("no tkhd found")?,
         })
     }
 }
