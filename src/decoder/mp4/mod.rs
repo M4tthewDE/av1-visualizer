@@ -11,6 +11,7 @@ use self::{ftyp::Ftyp, moov::Moov};
 mod edts;
 mod elst;
 mod ftyp;
+mod hdlr;
 mod mdhd;
 mod mdia;
 mod moov;

@@ -5,15 +5,19 @@ use anyhow::Result;
 
 use crate::decoder::mp4::mdhd::Mdhd;
 
+use super::hdlr::Hdlr;
+
 #[derive(Clone, Debug, Default)]
 pub struct Mdia {
     pub mdhd: Mdhd,
+    pub hdlr: Hdlr,
 }
 
 impl Mdia {
     #[tracing::instrument(skip_all)]
     pub fn new(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Mdia> {
         let mut mdhd = None;
+        let mut hdlr = None;
         loop {
             let mut box_size = [0u8; 4];
             c.read_exact(&mut box_size)?;
@@ -25,6 +29,7 @@ impl Mdia {
 
             match box_type.as_str() {
                 "mdhd" => mdhd = Some(Mdhd::new(c)?),
+                "hdlr" => hdlr = Some(Hdlr::new(c)?),
                 typ => bail!("box type {typ:?} not implemented"),
             }
 
@@ -35,6 +40,7 @@ impl Mdia {
 
         Ok(Mdia {
             mdhd: mdhd.context("no mdhd found")?,
+            hdlr: hdlr.context("no hdlr found")?,
         })
     }
 }
