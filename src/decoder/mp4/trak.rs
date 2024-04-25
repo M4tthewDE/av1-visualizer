@@ -2,17 +2,19 @@ use std::io::{Cursor, Read};
 
 use anyhow::{bail, Context, Result};
 
-use super::tkhd::Tkhd;
+use super::{edts::Edts, tkhd::Tkhd};
 
 #[derive(Clone, Debug, Default)]
 pub struct Trak {
     pub tkhd: Tkhd,
+    pub edts: Option<Edts>,
 }
 
 impl Trak {
     #[tracing::instrument(skip_all)]
     pub fn new(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Trak> {
         let mut tkhd = None;
+        let mut edts = None;
         loop {
             let mut box_size = [0u8; 4];
             c.read_exact(&mut box_size)?;
@@ -24,6 +26,7 @@ impl Trak {
 
             match box_type.as_str() {
                 "tkhd" => tkhd = Some(Tkhd::new(c)?),
+                "edts" => edts = Some(Edts::new(c)?),
                 typ => bail!("box type {typ:?} not implemented"),
             }
 
@@ -34,6 +37,7 @@ impl Trak {
 
         Ok(Trak {
             tkhd: tkhd.context("no tkhd found")?,
+            edts,
         })
     }
 }
