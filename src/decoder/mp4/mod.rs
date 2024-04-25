@@ -56,8 +56,8 @@ impl Mp4 {
             let box_type = String::from_utf8(box_type.to_vec())?;
 
             match box_type.as_str() {
-                "ftyp" => self.ftyp = ftyp::ftyp(&mut c, box_size as usize)?,
-                "moov" => self.moov = moov::moov(&mut c, box_size as usize)?,
+                "ftyp" => self.ftyp = Ftyp::new(&mut c, box_size as usize)?,
+                "moov" => self.moov = Moov::new(&mut c, box_size as usize)?,
                 typ => bail!("box type {typ:?} not implemented"),
             }
 

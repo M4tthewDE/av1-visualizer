@@ -14,29 +14,31 @@ pub struct Ftyp {
     pub compatible_brands: Vec<String>,
 }
 
-#[tracing::instrument(skip_all, name = "ftyp")]
-pub fn ftyp(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Ftyp> {
-    let mut major_brand = [0u8; 4];
-    c.read_exact(&mut major_brand)?;
-    let major_brand = String::from_utf8(major_brand.to_vec())?;
+impl Ftyp {
+    #[tracing::instrument(skip_all, name = "ftyp")]
+    pub fn new(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Ftyp> {
+        let mut major_brand = [0u8; 4];
+        c.read_exact(&mut major_brand)?;
+        let major_brand = String::from_utf8(major_brand.to_vec())?;
 
-    let mut minor_version = [0u8; 4];
-    c.read_exact(&mut minor_version)?;
-    let minor_version = u32::from_be_bytes(minor_version);
-    info!("major_brand: {major_brand}, minor_version: {minor_version}",);
+        let mut minor_version = [0u8; 4];
+        c.read_exact(&mut minor_version)?;
+        let minor_version = u32::from_be_bytes(minor_version);
+        info!("major_brand: {major_brand}, minor_version: {minor_version}",);
 
-    let mut compatible_brands = Vec::new();
-    for _ in 0..size / 8 {
-        let mut brand = [0u8; 4];
-        c.read_exact(&mut brand)?;
-        compatible_brands.push(String::from_utf8(brand.to_vec())?);
+        let mut compatible_brands = Vec::new();
+        for _ in 0..size / 8 {
+            let mut brand = [0u8; 4];
+            c.read_exact(&mut brand)?;
+            compatible_brands.push(String::from_utf8(brand.to_vec())?);
+        }
+
+        info!("brands: {compatible_brands:?}");
+
+        Ok(Ftyp {
+            major_brand,
+            minor_version,
+            compatible_brands,
+        })
     }
-
-    info!("brands: {compatible_brands:?}");
-
-    Ok(Ftyp {
-        major_brand,
-        minor_version,
-        compatible_brands,
-    })
 }
