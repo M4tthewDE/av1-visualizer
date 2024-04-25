@@ -68,6 +68,7 @@ impl Elst {
         };
 
         info!("elst: {elst:?}");
-        bail!("TODO: elst");
+
+        Ok(elst)
     }
 }
