@@ -1,17 +1,24 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::io::{Cursor, Read};
-use tracing::info;
 
 use anyhow::bail;
+
+use super::{
+    mvhd::{self, Mvhd},
+    tkhd::{self, Tkhd},
+};
 
 #[derive(Clone, Debug, Default)]
 pub struct Moov {
     pub mvhd: Mvhd,
+    pub tkhd: Tkhd,
 }
 
 #[tracing::instrument(skip_all)]
 pub fn moov(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Moov> {
-    let mut mvhd: Mvhd;
+    let mut mvhd = None;
+    let mut tkhd = None;
+
     loop {
         let mut box_size = [0u8; 4];
         c.read_exact(&mut box_size)?;
@@ -22,7 +29,8 @@ pub fn moov(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Moov> {
         let box_type = String::from_utf8(box_type.to_vec())?;
 
         match box_type.as_str() {
-            "mvhd" => mvhd = parse_mvhd(c, box_size as u64)?,
+            "mvhd" => mvhd = Some(mvhd::parse_mvhd(c, box_size as u64)?),
+            "tkhd" => tkhd = Some(tkhd::parse_tkhd(c)?),
             typ => bail!("box type {typ:?} not implemented"),
         }
 
@@ -31,50 +39,8 @@ pub fn moov(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Moov> {
         }
     }
 
-    Ok(Moov { mvhd })
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct Mvhd {
-    pub version: u8,
-    pub timescale: u32,
-    pub duration: u32,
-    pub rate: f64,
-    pub volume: f64,
-}
-
-#[tracing::instrument(skip_all)]
-fn parse_mvhd(c: &mut Cursor<Vec<u8>>, size: u64) -> Result<Mvhd> {
-    let mut version = [0u8; 1];
-    c.read_exact(&mut version)?;
-    c.set_position(c.position() + 11);
-    let mut timescale = [0u8; 4];
-    c.read_exact(&mut timescale)?;
-    let mut duration = [0u8; 4];
-    c.read_exact(&mut duration)?;
-    let mut rate = [0u8; 4];
-    c.read_exact(&mut rate)?;
-    let mut volume = [0u8; 2];
-    c.read_exact(&mut volume)?;
-
-    c.set_position(c.position() + size - 26);
-
-    let mvhd = Mvhd {
-        version: version[0],
-        timescale: u32::from_be_bytes(timescale),
-        duration: u32::from_be_bytes(duration),
-        rate: fixed32(rate),
-        volume: fixed16(volume),
-    };
-    info!("mvhd: {mvhd:?}");
-
-    Ok(mvhd)
-}
-
-fn fixed32(data: [u8; 4]) -> f64 {
-    u32::from_be_bytes(data) as f64 / 65536.0
-}
-
-fn fixed16(data: [u8; 2]) -> f64 {
-    u16::from_be_bytes(data) as f64 / 256.0
+    Ok(Moov {
+        mvhd: mvhd.context("no mvhd found")?,
+        tkhd: tkhd.context("no tkhd found")?,
+    })
 }

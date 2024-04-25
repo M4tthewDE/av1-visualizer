@@ -10,9 +10,11 @@ use self::{ftyp::Ftyp, moov::Moov};
 
 mod ftyp;
 mod moov;
+mod mvhd;
+mod tkhd;
 
 // reference:
-// https://github.com/alfg/mp4/blob/master/atom/box.go#L99
+// https://b.goeswhere.com/ISO_IEC_14496-12_2015.pdf
 
 #[derive(Clone, Debug, Default)]
 pub struct Mp4 {
@@ -57,4 +59,12 @@ impl Mp4 {
 
         Ok(())
     }
+}
+
+fn fixed32(data: [u8; 4]) -> f64 {
+    u32::from_be_bytes(data) as f64 / 65536.0
+}
+
+fn fixed16(data: [u8; 2]) -> f64 {
+    u16::from_be_bytes(data) as f64 / 256.0
 }
