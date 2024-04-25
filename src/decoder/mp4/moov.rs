@@ -3,10 +3,7 @@ use std::io::{Cursor, Read};
 
 use anyhow::bail;
 
-use super::{
-    mvhd::{self, Mvhd},
-    trak::Trak,
-};
+use super::{mvhd::Mvhd, trak::Trak};
 
 #[derive(Clone, Debug, Default)]
 pub struct Moov {
@@ -29,7 +26,7 @@ pub fn moov(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Moov> {
         let box_type = String::from_utf8(box_type.to_vec())?;
 
         match box_type.as_str() {
-            "mvhd" => mvhd = Some(mvhd::parse_mvhd(c)?),
+            "mvhd" => mvhd = Some(Mvhd::new(c)?),
             "trak" => traks.push(Trak::new(c, box_size as usize)?),
             typ => bail!("box type {typ:?} not implemented"),
         }
