@@ -5,6 +5,12 @@ use anyhow::bail;
 
 use super::{mvhd::Mvhd, trak::Trak};
 
+/// The metadata for a presentation is stored in the single Movie Box which occurs at the top‐level of a file.
+/// Normally this box is close to the beginning or end of the file, though this is not required.
+///
+/// Box Type: 'moov'
+/// Mandatory: Yes
+/// Quantity: Exactly one
 #[derive(Clone, Debug, Default)]
 pub struct Moov {
     pub mvhd: Mvhd,
