@@ -20,7 +20,7 @@ pub struct Mvhd {
 }
 
 impl Mvhd {
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(skip_all, name = "mvhd")]
     pub fn new(c: &mut Cursor<Vec<u8>>) -> Result<Mvhd> {
         let mut version = [0u8; 4];
         c.read_exact(&mut version)?;

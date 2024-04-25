@@ -11,7 +11,7 @@ pub struct Edts {
 }
 
 impl Edts {
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(skip_all, name = "edts")]
     pub fn new(c: &mut Cursor<Vec<u8>>) -> Result<Edts> {
         let mut box_size = [0u8; 4];
         c.read_exact(&mut box_size)?;

@@ -32,7 +32,7 @@ pub struct Mp4 {
 }
 
 impl Mp4 {
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(skip_all, name = "mp4")]
     pub fn new(p: PathBuf) -> Result<Mp4> {
         let data = std::fs::read(p)?;
         info!("loaded {} bytes", data.len());

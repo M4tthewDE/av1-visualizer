@@ -14,7 +14,7 @@ pub struct Ftyp {
     pub compatible_brands: Vec<String>,
 }
 
-#[tracing::instrument(skip_all)]
+#[tracing::instrument(skip_all, name = "ftyp")]
 pub fn ftyp(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Ftyp> {
     let mut major_brand = [0u8; 4];
     c.read_exact(&mut major_brand)?;

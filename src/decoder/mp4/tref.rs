@@ -12,7 +12,7 @@ pub struct Tref {
 }
 
 impl Tref {
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(skip_all, name = "tref")]
     pub fn new(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Tref> {
         let mut version = [0u8; 1];
         c.read_exact(&mut version)?;

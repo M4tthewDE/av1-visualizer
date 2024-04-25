@@ -11,7 +11,7 @@ pub struct Moov {
     pub traks: Vec<Trak>,
 }
 
-#[tracing::instrument(skip_all)]
+#[tracing::instrument(skip_all, name = "moov")]
 pub fn moov(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Moov> {
     let mut mvhd = None;
     let mut traks = Vec::new();

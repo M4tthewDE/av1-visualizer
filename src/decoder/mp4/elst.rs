@@ -19,7 +19,7 @@ pub struct Entry {
 }
 
 impl Elst {
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(skip_all, name = "elst")]
     pub fn new(c: &mut Cursor<Vec<u8>>) -> Result<Elst> {
         let mut version = [0u8; 1];
         c.read_exact(&mut version)?;

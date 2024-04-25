@@ -11,7 +11,7 @@ pub struct Minf {
 }
 
 impl Minf {
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(skip_all, name = "minf")]
     pub fn new(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Minf> {
         let mut vmhd = None;
         loop {

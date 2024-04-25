@@ -13,7 +13,7 @@ pub struct Trak {
 }
 
 impl Trak {
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(skip_all, name = "trak")]
     pub fn new(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Trak> {
         let mut tkhd = None;
         let mut edts = None;

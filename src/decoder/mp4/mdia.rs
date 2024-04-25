@@ -15,7 +15,7 @@ pub struct Mdia {
 }
 
 impl Mdia {
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(skip_all, name = "mdia")]
     pub fn new(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Mdia> {
         let mut mdhd = None;
         let mut hdlr = None;
