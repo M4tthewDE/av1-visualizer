@@ -8,6 +8,7 @@ use tracing::info;
 
 use self::{ftyp::Ftyp, moov::Moov};
 
+mod av01;
 mod dinf;
 mod dref;
 mod edts;
@@ -19,6 +20,8 @@ mod mdia;
 mod minf;
 mod moov;
 mod mvhd;
+mod stbl;
+mod stsd;
 mod tkhd;
 mod trak;
 mod tref;
