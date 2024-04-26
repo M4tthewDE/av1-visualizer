@@ -77,7 +77,6 @@ impl Stsd {
 
         info!("stsd: {stsd:?}");
 
-        bail!("TODO: stsd");
         Ok(stsd)
     }
 }

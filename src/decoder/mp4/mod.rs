@@ -9,6 +9,7 @@ use tracing::info;
 use self::{ftyp::Ftyp, moov::Moov};
 
 mod av01;
+mod av1c;
 mod dinf;
 mod dref;
 mod edts;

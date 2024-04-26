@@ -2,6 +2,8 @@ use anyhow::{bail, Result};
 use std::io::{Cursor, Read};
 use tracing::info;
 
+use super::av1c::Av1C;
+
 #[derive(Clone, Debug, Default)]
 pub struct Av01 {
     pub width: u16,
@@ -11,6 +13,7 @@ pub struct Av01 {
     pub frame_count: u16,
     pub compressor_name: String,
     pub depth: u16,
+    pub av1c: Av1C,
 }
 
 impl Av01 {
@@ -56,6 +59,20 @@ impl Av01 {
         // skip pre_defined
         c.set_position(c.position() + 2);
 
+        let mut size = [0u8; 4];
+        c.read_exact(&mut size)?;
+        let size = u32::from_be_bytes(size);
+
+        let mut config_box = [0u8; 4];
+        c.read_exact(&mut config_box)?;
+        let config_box = String::from_utf8(config_box.to_vec())?;
+
+        if config_box != "av1C" {
+            bail!("config box {config_box} is not supported");
+        }
+
+        let av1c = Av1C::new(c, size as u64)?;
+
         let av01 = Av01 {
             width,
             height,
@@ -64,9 +81,11 @@ impl Av01 {
             frame_count,
             compressor_name,
             depth,
+            av1c,
         };
 
         info!("av01: {av01:?}");
-        bail!("TODO: av01");
+
+        Ok(av01)
     }
 }
