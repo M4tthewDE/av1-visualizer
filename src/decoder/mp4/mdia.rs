@@ -3,9 +3,7 @@ use std::io::{Cursor, Read};
 
 use anyhow::Result;
 
-use crate::decoder::mp4::mdhd::Mdhd;
-
-use super::{hdlr::Hdlr, minf::Minf};
+use super::{hdlr::Hdlr, mdhd::Mdhd, minf::Minf};
 
 #[derive(Clone, Debug, Default)]
 pub struct Mdia {

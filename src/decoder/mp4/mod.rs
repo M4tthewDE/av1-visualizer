@@ -8,6 +8,8 @@ use tracing::info;
 
 use self::{ftyp::Ftyp, moov::Moov};
 
+mod dinf;
+mod dref;
 mod edts;
 mod elst;
 mod ftyp;
