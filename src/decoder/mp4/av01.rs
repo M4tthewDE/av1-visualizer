@@ -73,6 +73,9 @@ impl Av01 {
 
         let av1c = Av1C::new(c, size as u64)?;
 
+        // https://github.com/abema/go-mp4/blob/ffc2144971771a2b983cf73eab568eaae5b9c195/box_types_iso14496_12.go#L477
+        // 'fief' is not included in the spec for some reason
+
         let av01 = Av01 {
             width,
             height,
