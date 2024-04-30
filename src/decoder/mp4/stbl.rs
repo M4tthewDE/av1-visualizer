@@ -92,11 +92,63 @@ impl Stss {
     }
 }
 
+pub type StscEntry = (u32, u32, u32);
+
+#[derive(Clone, Debug, Default)]
+pub struct Stsc {
+    pub version: u8,
+    pub flags: [u8; 3],
+    pub entries: Vec<StscEntry>,
+}
+
+impl Stsc {
+    #[tracing::instrument(skip_all, name = "stsc")]
+    pub fn new(c: &mut Cursor<Vec<u8>>) -> Result<Stsc> {
+        let mut version = [0u8; 1];
+        c.read_exact(&mut version)?;
+
+        let mut flags = [0u8; 3];
+        c.read_exact(&mut flags)?;
+
+        let mut entry_count = [0u8; 4];
+        c.read_exact(&mut entry_count)?;
+        let entry_count = u32::from_be_bytes(entry_count);
+
+        let mut entries = Vec::new();
+        for _ in 0..entry_count {
+            let mut first_chunk = [0u8; 4];
+            c.read_exact(&mut first_chunk)?;
+            let first_chunk = u32::from_be_bytes(first_chunk);
+
+            let mut samples_per_chunk = [0u8; 4];
+            c.read_exact(&mut samples_per_chunk)?;
+            let samples_per_chunk = u32::from_be_bytes(samples_per_chunk);
+
+            let mut sample_description_index = [0u8; 4];
+            c.read_exact(&mut sample_description_index)?;
+            let sample_description_index = u32::from_be_bytes(sample_description_index);
+
+            entries.push((first_chunk, samples_per_chunk, sample_description_index));
+        }
+
+        let stsc = Stsc {
+            version: version[0],
+            flags,
+            entries,
+        };
+
+        info!("stsc: {stsc:?}");
+
+        Ok(stsc)
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct Stbl {
     pub stsd: Stsd,
     pub stts: Stts,
     pub stss: Stss,
+    pub stsc: Stsc,
 }
 
 impl Stbl {
@@ -105,6 +157,7 @@ impl Stbl {
         let mut stsd = None;
         let mut stts = None;
         let mut stss = None;
+        let mut stsc = None;
         loop {
             let mut box_size = [0u8; 4];
             c.read_exact(&mut box_size)?;
@@ -118,6 +171,7 @@ impl Stbl {
                 "stsd" => stsd = Some(Stsd::new(c)?),
                 "stts" => stts = Some(Stts::new(c)?),
                 "stss" => stss = Some(Stss::new(c)?),
+                "stsc" => stsc = Some(Stsc::new(c)?),
                 typ => bail!("box type {typ:?} not implemented"),
             }
 
@@ -130,6 +184,7 @@ impl Stbl {
             stsd: stsd.context("no stsd found")?,
             stts: stts.context("no stts found")?,
             stss: stss.context("no stss found")?,
+            stsc: stsc.context("no stsc found")?,
         };
 
         info!("stbl: {stbl:?}");
