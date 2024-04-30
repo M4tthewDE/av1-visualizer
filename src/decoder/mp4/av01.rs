@@ -4,6 +4,26 @@ use tracing::info;
 
 use super::av1c::Av1C;
 
+// https://github.com/abema/go-mp4/blob/ffc2144971771a2b983cf73eab568eaae5b9c195/box_types_iso14496_12.go#L477
+#[derive(Clone, Debug, Default)]
+pub struct Fiel {
+    pub field_count: u8,
+    pub field_ordering: u8,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct Pasp {
+    pub h_spacing: u32,
+    pub v_spacing: u32,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct Btrt {
+    pub buffer_size_db: u32,
+    pub max_bitrate: u32,
+    pub avg_bitrate: u32,
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct Av01 {
     pub width: u16,
@@ -14,6 +34,10 @@ pub struct Av01 {
     pub compressor_name: String,
     pub depth: u16,
     pub av1c: Av1C,
+    pub fiel: Fiel,
+    // FIXME: this should be optional
+    pub pasp: Pasp,
+    pub btrt: Btrt,
 }
 
 impl Av01 {
@@ -73,8 +97,59 @@ impl Av01 {
 
         let av1c = Av1C::new(c, size as u64)?;
 
-        // https://github.com/abema/go-mp4/blob/ffc2144971771a2b983cf73eab568eaae5b9c195/box_types_iso14496_12.go#L477
-        // 'fief' is not included in the spec for some reason
+        let mut box_size = [0u8; 4];
+        c.read_exact(&mut box_size)?;
+
+        let mut box_type = [0u8; 4];
+        c.read_exact(&mut box_type)?;
+        let box_type = String::from_utf8(box_type.to_vec())?;
+        if box_type != "fiel" {
+            bail!("only supports 'fiel', not '{box_type}'");
+        }
+
+        let mut fields = [0u8; 2];
+        c.read_exact(&mut fields)?;
+
+        let mut box_size = [0u8; 4];
+        c.read_exact(&mut box_size)?;
+
+        let mut box_type = [0u8; 4];
+        c.read_exact(&mut box_type)?;
+        let box_type = String::from_utf8(box_type.to_vec())?;
+        if box_type != "pasp" {
+            bail!("only supports 'pasp', not '{box_type}'");
+        }
+
+        let mut h_spacing = [0u8; 4];
+        c.read_exact(&mut h_spacing)?;
+        let h_spacing = u32::from_be_bytes(h_spacing);
+
+        let mut v_spacing = [0u8; 4];
+        c.read_exact(&mut v_spacing)?;
+        let v_spacing = u32::from_be_bytes(v_spacing);
+
+        let mut box_size = [0u8; 4];
+        c.read_exact(&mut box_size)?;
+
+        let mut box_type = [0u8; 4];
+        c.read_exact(&mut box_type)?;
+        let box_type = String::from_utf8(box_type.to_vec())?;
+
+        if box_type != "btrt" {
+            bail!("only supports 'btrt', not '{box_type}'");
+        }
+
+        let mut buffer_size_db = [0u8; 4];
+        c.read_exact(&mut buffer_size_db)?;
+        let buffer_size_db = u32::from_be_bytes(buffer_size_db);
+
+        let mut max_bitrate = [0u8; 4];
+        c.read_exact(&mut max_bitrate)?;
+        let max_bitrate = u32::from_be_bytes(max_bitrate);
+
+        let mut avg_bitrate = [0u8; 4];
+        c.read_exact(&mut avg_bitrate)?;
+        let avg_bitrate = u32::from_be_bytes(avg_bitrate);
 
         let av01 = Av01 {
             width,
@@ -85,6 +160,19 @@ impl Av01 {
             compressor_name,
             depth,
             av1c,
+            fiel: Fiel {
+                field_count: fields[0],
+                field_ordering: fields[1],
+            },
+            pasp: Pasp {
+                h_spacing,
+                v_spacing,
+            },
+            btrt: Btrt {
+                buffer_size_db,
+                max_bitrate,
+                avg_bitrate,
+            },
         };
 
         info!("av01: {av01:?}");
