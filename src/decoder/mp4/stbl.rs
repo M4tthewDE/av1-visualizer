@@ -16,7 +16,7 @@ pub struct Stts {
 }
 
 impl Stts {
-    #[tracing::instrument(skip_all, name = "stbl")]
+    #[tracing::instrument(skip_all, name = "stts")]
     pub fn new(c: &mut Cursor<Vec<u8>>) -> Result<Stts> {
         let mut version = [0u8; 1];
         c.read_exact(&mut version)?;
@@ -54,9 +54,49 @@ impl Stts {
 }
 
 #[derive(Clone, Debug, Default)]
+pub struct Stss {
+    pub version: u8,
+    pub flags: [u8; 3],
+    pub sample_numbers: Vec<u32>,
+}
+
+impl Stss {
+    #[tracing::instrument(skip_all, name = "stss")]
+    pub fn new(c: &mut Cursor<Vec<u8>>) -> Result<Stss> {
+        let mut version = [0u8; 1];
+        c.read_exact(&mut version)?;
+
+        let mut flags = [0u8; 3];
+        c.read_exact(&mut flags)?;
+
+        let mut entry_count = [0u8; 4];
+        c.read_exact(&mut entry_count)?;
+        let entry_count = u32::from_be_bytes(entry_count);
+
+        let mut sample_numbers = Vec::new();
+        for _ in 0..entry_count {
+            let mut sample_number = [0u8; 4];
+            c.read_exact(&mut sample_number)?;
+            sample_numbers.push(u32::from_be_bytes(sample_number));
+        }
+
+        let stss = Stss {
+            version: version[0],
+            flags,
+            sample_numbers,
+        };
+
+        info!("stss: {stss:?}");
+
+        Ok(stss)
+    }
+}
+
+#[derive(Clone, Debug, Default)]
 pub struct Stbl {
     pub stsd: Stsd,
     pub stts: Stts,
+    pub stss: Stss,
 }
 
 impl Stbl {
@@ -64,6 +104,7 @@ impl Stbl {
     pub fn new(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Stbl> {
         let mut stsd = None;
         let mut stts = None;
+        let mut stss = None;
         loop {
             let mut box_size = [0u8; 4];
             c.read_exact(&mut box_size)?;
@@ -76,6 +117,7 @@ impl Stbl {
             match box_type.as_str() {
                 "stsd" => stsd = Some(Stsd::new(c)?),
                 "stts" => stts = Some(Stts::new(c)?),
+                "stss" => stss = Some(Stss::new(c)?),
                 typ => bail!("box type {typ:?} not implemented"),
             }
 
@@ -87,6 +129,7 @@ impl Stbl {
         let stbl = Stbl {
             stsd: stsd.context("no stsd found")?,
             stts: stts.context("no stts found")?,
+            stss: stss.context("no stss found")?,
         };
 
         info!("stbl: {stbl:?}");
