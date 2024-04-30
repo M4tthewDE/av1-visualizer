@@ -147,7 +147,7 @@ impl Stsc {
 pub struct Stbl {
     pub stsd: Stsd,
     pub stts: Stts,
-    pub stss: Stss,
+    pub stss: Option<Stss>,
     pub stsc: Stsc,
 }
 
@@ -183,7 +183,7 @@ impl Stbl {
         let stbl = Stbl {
             stsd: stsd.context("no stsd found")?,
             stts: stts.context("no stts found")?,
-            stss: stss.context("no stss found")?,
+            stss,
             stsc: stsc.context("no stsc found")?,
         };
 
