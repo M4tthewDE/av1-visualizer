@@ -193,12 +193,54 @@ impl Stsz {
 }
 
 #[derive(Clone, Debug, Default)]
+pub struct Stco {
+    pub version: u8,
+    pub flags: [u8; 3],
+    pub entry_count: u32,
+    pub chunk_offsets: Vec<u32>,
+}
+
+impl Stco {
+    #[tracing::instrument(skip_all, name = "stco")]
+    pub fn new(c: &mut Cursor<Vec<u8>>) -> Result<Stco> {
+        let mut version = [0u8; 1];
+        c.read_exact(&mut version)?;
+
+        let mut flags = [0u8; 3];
+        c.read_exact(&mut flags)?;
+
+        let mut entry_count = [0u8; 4];
+        c.read_exact(&mut entry_count)?;
+        let entry_count = u32::from_be_bytes(entry_count);
+
+        let mut chunk_offsets = Vec::new();
+        for _ in 0..entry_count {
+            let mut entry_size = [0u8; 4];
+            c.read_exact(&mut entry_size)?;
+            chunk_offsets.push(u32::from_be_bytes(entry_size));
+        }
+
+        let stco = Stco {
+            version: version[0],
+            flags,
+            entry_count,
+            chunk_offsets,
+        };
+
+        info!("stco: {stco:?}");
+
+        Ok(stco)
+    }
+}
+
+#[derive(Clone, Debug, Default)]
 pub struct Stbl {
     pub stsd: Stsd,
     pub stts: Stts,
     pub stss: Option<Stss>,
     pub stsc: Stsc,
     pub stsz: Stsz,
+    pub stco: Stco,
 }
 
 impl Stbl {
@@ -209,6 +251,7 @@ impl Stbl {
         let mut stss = None;
         let mut stsc = None;
         let mut stsz = None;
+        let mut stco = None;
         loop {
             let mut box_size = [0u8; 4];
             c.read_exact(&mut box_size)?;
@@ -224,6 +267,7 @@ impl Stbl {
                 "stss" => stss = Some(Stss::new(c)?),
                 "stsc" => stsc = Some(Stsc::new(c)?),
                 "stsz" => stsz = Some(Stsz::new(c)?),
+                "stco" => stco = Some(Stco::new(c)?),
                 typ => bail!("box type {typ:?} not implemented"),
             }
 
@@ -238,6 +282,7 @@ impl Stbl {
             stss,
             stsc: stsc.context("no stsc found")?,
             stsz: stsz.context("no stsz found")?,
+            stco: stco.context("no stco found")?,
         };
 
         info!("stbl: {stbl:?}");
