@@ -1,5 +1,6 @@
 use anyhow::{bail, Context};
 use std::io::{Cursor, Read};
+use tracing::warn;
 
 use anyhow::Result;
 
@@ -15,6 +16,8 @@ pub struct Mdia {
 impl Mdia {
     #[tracing::instrument(skip_all, name = "mdia")]
     pub fn new(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Mdia> {
+        // subtract 8 from start because we already parsed box_size and box_type
+        let start = c.position() - 8;
         let mut mdhd = None;
         let mut hdlr = None;
         let mut minf = None;
@@ -35,7 +38,7 @@ impl Mdia {
                 typ => bail!("box type {typ:?} not implemented"),
             }
 
-            if c.position() == size as u64 {
+            if c.position() == start + size as u64 {
                 break;
             }
         }
