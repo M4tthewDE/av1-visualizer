@@ -14,8 +14,11 @@ pub struct Trak {
 }
 
 impl Trak {
-    #[tracing::instrument(skip_all, name = "trak")]
+    #[tracing::instrument(skip(c), name = "trak")]
     pub fn new(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Trak> {
+        // subtract 8 from start because we already parsed box_size and box_type
+        let start = c.position() - 8;
+
         let mut tkhd = None;
         let mut edts = None;
         let mut tref = None;
@@ -37,7 +40,7 @@ impl Trak {
                 typ => bail!("box type {typ:?} not implemented"),
             }
 
-            if c.position() == size as u64 {
+            if c.position() == start + size as u64 {
                 break;
             }
         }
