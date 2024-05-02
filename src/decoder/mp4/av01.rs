@@ -151,7 +151,7 @@ impl Av01 {
         c.read_exact(&mut avg_bitrate)?;
         let avg_bitrate = u32::from_be_bytes(avg_bitrate);
 
-        let av01 = Av01 {
+        Ok(Av01 {
             width,
             height,
             horizresolution,
@@ -173,10 +173,6 @@ impl Av01 {
                 max_bitrate,
                 avg_bitrate,
             },
-        };
-
-        info!("av01: {av01:?}");
-
-        Ok(av01)
+        })
     }
 }

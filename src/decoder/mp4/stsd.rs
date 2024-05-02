@@ -67,16 +67,12 @@ impl Stsd {
             });
         }
 
-        let stsd = Stsd {
+        Ok(Stsd {
             version: version[0],
             flags,
             entry_count,
             handler_type,
             sample_entries,
-        };
-
-        info!("stsd: {stsd:?}");
-
-        Ok(stsd)
+        })
     }
 }

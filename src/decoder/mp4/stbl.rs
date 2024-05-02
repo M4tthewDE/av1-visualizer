@@ -41,15 +41,11 @@ impl Stts {
             entries.push((sample_count, sample_delta));
         }
 
-        let stts = Stts {
+        Ok(Stts {
             version: version[0],
             flags,
             entries,
-        };
-
-        info!("stts: {stts:?}");
-
-        Ok(stts)
+        })
     }
 }
 
@@ -80,15 +76,11 @@ impl Stss {
             sample_numbers.push(u32::from_be_bytes(sample_number));
         }
 
-        let stss = Stss {
+        Ok(Stss {
             version: version[0],
             flags,
             sample_numbers,
-        };
-
-        info!("stss: {stss:?}");
-
-        Ok(stss)
+        })
     }
 }
 
@@ -131,15 +123,11 @@ impl Stsc {
             entries.push((first_chunk, samples_per_chunk, sample_description_index));
         }
 
-        let stsc = Stsc {
+        Ok(Stsc {
             version: version[0],
             flags,
             entries,
-        };
-
-        info!("stsc: {stsc:?}");
-
-        Ok(stsc)
+        })
     }
 }
 
@@ -178,17 +166,13 @@ impl Stsz {
             }
         }
 
-        let stsz = Stsz {
+        Ok(Stsz {
             version: version[0],
             flags,
             sample_size,
             sample_count,
             entries,
-        };
-
-        info!("stsz: {stsz:?}");
-
-        Ok(stsz)
+        })
     }
 }
 
@@ -220,16 +204,12 @@ impl Stco {
             chunk_offsets.push(u32::from_be_bytes(entry_size));
         }
 
-        let stco = Stco {
+        Ok(Stco {
             version: version[0],
             flags,
             entry_count,
             chunk_offsets,
-        };
-
-        info!("stco: {stco:?}");
-
-        Ok(stco)
+        })
     }
 }
 

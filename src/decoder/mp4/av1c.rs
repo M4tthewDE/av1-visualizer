@@ -65,7 +65,7 @@ impl Av1C {
             config_obus.push(co[0]);
         }
 
-        let av1c = Av1C {
+        Ok(Av1C {
             marker,
             version,
             seq_profile,
@@ -79,10 +79,6 @@ impl Av1C {
             chroma_sample_position: params[0] & 2,
             initial_presentation_delay_minus_one,
             config_obus,
-        };
-
-        info!("av1c: {av1c:?}");
-
-        Ok(av1c)
+        })
     }
 }
