@@ -1,6 +1,5 @@
 use anyhow::bail;
 use std::io::{Cursor, Read};
-use tracing::info;
 
 use anyhow::Result;
 
@@ -53,7 +52,7 @@ impl Mdhd {
             bail!("pre_defined has to be 0, is {pre_defined}");
         }
 
-        let mdhd = Mdhd {
+        Ok(Mdhd {
             version: version[0],
             flags,
             creation_time: u32::from_be_bytes(creation_time),
@@ -61,9 +60,6 @@ impl Mdhd {
             timescale: u32::from_be_bytes(timescale),
             duration: u32::from_be_bytes(duration),
             language: lang,
-        };
-        info!("mdhd: {mdhd:?}");
-
-        Ok(mdhd)
+        })
     }
 }

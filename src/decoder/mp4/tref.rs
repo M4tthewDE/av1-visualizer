@@ -1,5 +1,4 @@
 use std::io::{Cursor, Read};
-use tracing::info;
 
 use anyhow::Result;
 
@@ -31,14 +30,11 @@ impl Tref {
             track_ids.push(u32::from_be_bytes(track_id));
         }
 
-        let tref = Tref {
+        Ok(Tref {
             version: version[0],
             flags,
             reference_type,
             track_ids,
-        };
-
-        info!("tref: {tref:?}");
-        Ok(tref)
+        })
     }
 }

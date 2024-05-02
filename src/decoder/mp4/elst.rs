@@ -1,7 +1,6 @@
 use std::io::{Cursor, Read};
 
 use anyhow::{bail, Result};
-use tracing::info;
 
 #[derive(Clone, Debug, Default)]
 pub struct Elst {
@@ -60,15 +59,11 @@ impl Elst {
             })
         }
 
-        let elst = Elst {
+        Ok(Elst {
             version: version[0],
             flags,
             entry_count,
             entries,
-        };
-
-        info!("elst: {elst:?}");
-
-        Ok(elst)
+        })
     }
 }

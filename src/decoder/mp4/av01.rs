@@ -1,6 +1,5 @@
 use anyhow::{bail, Result};
 use std::io::{Cursor, Read};
-use tracing::info;
 
 use super::av1c::Av1C;
 

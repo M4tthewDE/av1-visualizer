@@ -2,7 +2,6 @@ use std::io::BufRead;
 use std::io::{Cursor, Read};
 
 use anyhow::{bail, Result};
-use tracing::info;
 
 #[derive(Clone, Debug)]
 pub enum DataEntry {
@@ -85,21 +84,16 @@ impl Dref {
                 e => bail!("unknown entry_type {e}"),
             }
         }
-
-        let dref = Dref {
-            version: version[0],
-            flags,
-            entry_count,
-            entries,
-        };
-
-        info!("dref: {dref:?}");
-
         // ignore malformed end of dref
         // TODO: unsure why we need to subtract 8 bytes here
         // without it, stbl is skipped
         c.set_position(start + size as u64 - 8);
 
-        Ok(dref)
+        Ok(Dref {
+            version: version[0],
+            flags,
+            entry_count,
+            entries,
+        })
     }
 }

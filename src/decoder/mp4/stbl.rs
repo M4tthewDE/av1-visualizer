@@ -1,6 +1,5 @@
 use anyhow::{bail, Context};
 use std::io::{Cursor, Read};
-use tracing::{info, warn};
 
 use anyhow::Result;
 
@@ -258,17 +257,13 @@ impl Stbl {
             }
         }
 
-        let stbl = Stbl {
+        Ok(Stbl {
             stsd: stsd.context("no stsd found")?,
             stts: stts.context("no stts found")?,
             stss,
             stsc: stsc.context("no stsc found")?,
             stsz: stsz.context("no stsz found")?,
             stco: stco.context("no stco found")?,
-        };
-
-        info!("stbl: {stbl:?}");
-
-        Ok(stbl)
+        })
     }
 }

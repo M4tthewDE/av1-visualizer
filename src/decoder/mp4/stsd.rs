@@ -1,6 +1,5 @@
 use anyhow::bail;
 use std::io::{Cursor, Read};
-use tracing::info;
 
 use anyhow::Result;
 

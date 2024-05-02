@@ -1,7 +1,7 @@
 use std::io::{Cursor, Read};
 
 use anyhow::{bail, Context, Result};
-use tracing::warn;
+use tracing::{info, warn};
 
 use super::{edts::Edts, mdia::Mdia, tkhd::Tkhd, tref::Tref};
 
@@ -14,7 +14,7 @@ pub struct Trak {
 }
 
 impl Trak {
-    #[tracing::instrument(skip(c), name = "trak")]
+    #[tracing::instrument(skip_all, name = "trak")]
     pub fn new(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Trak> {
         // subtract 8 from start because we already parsed box_size and box_type
         let start = c.position() - 8;
@@ -45,11 +45,14 @@ impl Trak {
             }
         }
 
-        Ok(Trak {
+        let trak = Trak {
             tkhd: tkhd.context("no tkhd found")?,
             edts,
             tref,
             mdia: mdia.context("no tkhd found")?,
-        })
+        };
+
+        info!("trak: {trak:?}");
+        Ok(trak)
     }
 }

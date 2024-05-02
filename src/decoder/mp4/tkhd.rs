@@ -1,7 +1,6 @@
 use std::io::{Cursor, Read};
 
 use anyhow::Result;
-use tracing::info;
 
 use crate::decoder::mp4::{fixed16, fixed32};
 
@@ -68,7 +67,7 @@ impl Tkhd {
         let mut height = [0u8; 4];
         c.read_exact(&mut height)?;
 
-        let tkhd = Tkhd {
+        Ok(Tkhd {
             version: version[0],
             flags,
             creation_time: u32::from_be_bytes(creation_time),
@@ -81,9 +80,6 @@ impl Tkhd {
             matrix,
             width: fixed32(width),
             height: fixed32(height),
-        };
-        info!("tkhd: {tkhd:?}");
-
-        Ok(tkhd)
+        })
     }
 }

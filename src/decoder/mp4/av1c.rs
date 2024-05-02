@@ -1,7 +1,6 @@
 use std::io::{Cursor, Read};
 
 use anyhow::{bail, Result};
-use tracing::info;
 
 /// https://aomediacodec.github.io/av1-isobmff/#av1sampleentry-section
 #[derive(Clone, Debug, Default)]

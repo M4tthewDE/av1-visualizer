@@ -1,7 +1,6 @@
 use std::io::{Cursor, Read};
 
 use anyhow::{bail, Result};
-use tracing::info;
 
 /// Contains general presentation information, independent of the coding, for video media.
 ///
@@ -58,17 +57,13 @@ impl Vmhd {
         let mut blue = [0u8; 2];
         c.read_exact(&mut blue)?;
 
-        let vmhd = Vmhd {
+        Ok(Vmhd {
             version: version[0],
             flags,
             graphics_mode,
             red: u16::from_be_bytes(red),
             green: u16::from_be_bytes(green),
             blue: u16::from_be_bytes(blue),
-        };
-
-        info!("vmhd: {vmhd:?}");
-
-        Ok(vmhd)
+        })
     }
 }

@@ -1,6 +1,5 @@
 use anyhow::bail;
 use std::io::{BufRead, Cursor, Read};
-use tracing::info;
 
 use anyhow::Result;
 
@@ -44,14 +43,11 @@ impl Hdlr {
         c.read_until(b'\0', &mut name)?;
         name.remove(name.len() - 1);
 
-        let hdlr = Hdlr {
+        Ok(Hdlr {
             version: version[0],
             flags,
             handler_type,
             name: String::from_utf8(name)?,
-        };
-        info!("hdlr: {hdlr:?}");
-
-        Ok(hdlr)
+        })
     }
 }
