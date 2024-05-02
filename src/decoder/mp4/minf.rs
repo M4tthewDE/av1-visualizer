@@ -3,11 +3,23 @@ use std::io::{Cursor, Read};
 
 use anyhow::Result;
 
-use super::{dinf::Dinf, stbl::Stbl, vmhd::Vmhd};
+use super::{dinf::Dinf, gmhd::Gmhd, stbl::Stbl, vmhd::Vmhd};
+
+#[derive(Clone, Debug)]
+pub enum InformationHeader {
+    Vmhd(Vmhd),
+    Gmhd(Gmhd),
+}
+
+impl Default for InformationHeader {
+    fn default() -> Self {
+        InformationHeader::Vmhd(Vmhd::default())
+    }
+}
 
 #[derive(Clone, Debug, Default)]
 pub struct Minf {
-    pub vmhd: Vmhd,
+    pub information_header: InformationHeader,
     pub dinf: Dinf,
     pub stbl: Stbl,
 }
@@ -15,7 +27,7 @@ pub struct Minf {
 impl Minf {
     #[tracing::instrument(skip_all, name = "minf")]
     pub fn new(c: &mut Cursor<Vec<u8>>, start: u64, size: u32) -> Result<Minf> {
-        let mut vmhd = None;
+        let mut information_header = None;
         let mut dinf = None;
         let mut stbl = None;
         loop {
@@ -31,7 +43,10 @@ impl Minf {
 
             match box_type.as_str() {
                 "dinf" => dinf = Some(Dinf::new(c)?),
-                "vmhd" => vmhd = Some(Vmhd::new(c)?),
+                "vmhd" => information_header = Some(InformationHeader::Vmhd(Vmhd::new(c)?)),
+                "gmhd" => {
+                    information_header = Some(InformationHeader::Gmhd(Gmhd::new(c, box_size)?));
+                }
                 "stbl" => stbl = Some(Stbl::new(c, box_start, box_size)?),
                 typ => bail!("box type {typ:?} not implemented"),
             }
@@ -42,7 +57,7 @@ impl Minf {
         }
 
         Ok(Minf {
-            vmhd: vmhd.context("no mvhd found")?,
+            information_header: information_header.context("no information header found")?,
             dinf: dinf.context("no dinf found")?,
             stbl: stbl.context("no stbl found")?,
         })

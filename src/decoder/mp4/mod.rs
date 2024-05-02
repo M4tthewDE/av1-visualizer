@@ -15,6 +15,7 @@ mod dref;
 mod edts;
 mod elst;
 mod ftyp;
+mod gmhd;
 mod hdlr;
 mod mdhd;
 mod mdia;
