@@ -1,6 +1,6 @@
 use anyhow::{bail, Context};
 use std::io::{Cursor, Read};
-use tracing::info;
+use tracing::{info, warn};
 
 use anyhow::Result;
 
@@ -246,6 +246,8 @@ pub struct Stbl {
 impl Stbl {
     #[tracing::instrument(skip_all, name = "stbl")]
     pub fn new(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Stbl> {
+        let start = c.position();
+
         let mut stsd = None;
         let mut stts = None;
         let mut stss = None;
@@ -271,7 +273,7 @@ impl Stbl {
                 typ => bail!("box type {typ:?} not implemented"),
             }
 
-            if c.position() == size as u64 {
+            if c.position() == start + size as u64 {
                 break;
             }
         }

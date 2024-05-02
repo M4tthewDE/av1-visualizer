@@ -21,7 +21,8 @@ impl Minf {
         loop {
             let mut box_size = [0u8; 4];
             c.read_exact(&mut box_size)?;
-            let _box_size = u32::from_be_bytes(box_size);
+            // subtracting 8 bytes because box_size and box_type belong to the overall box size
+            let box_size = u32::from_be_bytes(box_size) - 8;
 
             let mut box_type = [0u8; 4];
             c.read_exact(&mut box_type)?;
@@ -30,7 +31,7 @@ impl Minf {
             match box_type.as_str() {
                 "dinf" => dinf = Some(Dinf::new(c)?),
                 "vmhd" => vmhd = Some(Vmhd::new(c)?),
-                "stbl" => stbl = Some(Stbl::new(c, size)?),
+                "stbl" => stbl = Some(Stbl::new(c, box_size as usize)?),
                 typ => bail!("box type {typ:?} not implemented"),
             }
 
