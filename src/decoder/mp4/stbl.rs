@@ -144,11 +144,61 @@ impl Stsc {
 }
 
 #[derive(Clone, Debug, Default)]
+pub struct Stsz {
+    pub version: u8,
+    pub flags: [u8; 3],
+    pub sample_size: u32,
+    pub sample_count: u32,
+    pub entries: Vec<u32>,
+}
+
+impl Stsz {
+    #[tracing::instrument(skip_all, name = "stsz")]
+    pub fn new(c: &mut Cursor<Vec<u8>>) -> Result<Stsz> {
+        let mut version = [0u8; 1];
+        c.read_exact(&mut version)?;
+
+        let mut flags = [0u8; 3];
+        c.read_exact(&mut flags)?;
+
+        let mut sample_size = [0u8; 4];
+        c.read_exact(&mut sample_size)?;
+        let sample_size = u32::from_be_bytes(sample_size);
+
+        let mut sample_count = [0u8; 4];
+        c.read_exact(&mut sample_count)?;
+        let sample_count = u32::from_be_bytes(sample_count);
+
+        let mut entries = Vec::new();
+        if sample_size == 0 {
+            for _ in 0..sample_count {
+                let mut entry_size = [0u8; 4];
+                c.read_exact(&mut entry_size)?;
+                entries.push(u32::from_be_bytes(entry_size));
+            }
+        }
+
+        let stsz = Stsz {
+            version: version[0],
+            flags,
+            sample_size,
+            sample_count,
+            entries,
+        };
+
+        info!("stsz: {stsz:?}");
+
+        Ok(stsz)
+    }
+}
+
+#[derive(Clone, Debug, Default)]
 pub struct Stbl {
     pub stsd: Stsd,
     pub stts: Stts,
     pub stss: Option<Stss>,
     pub stsc: Stsc,
+    pub stsz: Stsz,
 }
 
 impl Stbl {
@@ -158,6 +208,7 @@ impl Stbl {
         let mut stts = None;
         let mut stss = None;
         let mut stsc = None;
+        let mut stsz = None;
         loop {
             let mut box_size = [0u8; 4];
             c.read_exact(&mut box_size)?;
@@ -172,6 +223,7 @@ impl Stbl {
                 "stts" => stts = Some(Stts::new(c)?),
                 "stss" => stss = Some(Stss::new(c)?),
                 "stsc" => stsc = Some(Stsc::new(c)?),
+                "stsz" => stsz = Some(Stsz::new(c)?),
                 typ => bail!("box type {typ:?} not implemented"),
             }
 
@@ -185,6 +237,7 @@ impl Stbl {
             stts: stts.context("no stts found")?,
             stss,
             stsc: stsc.context("no stsc found")?,
+            stsz: stsz.context("no stsz found")?,
         };
 
         info!("stbl: {stbl:?}");
