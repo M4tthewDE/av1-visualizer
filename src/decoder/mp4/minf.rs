@@ -15,6 +15,8 @@ pub struct Minf {
 impl Minf {
     #[tracing::instrument(skip_all, name = "minf")]
     pub fn new(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Minf> {
+        let start = c.position();
+
         let mut vmhd = None;
         let mut dinf = None;
         let mut stbl = None;
@@ -35,7 +37,7 @@ impl Minf {
                 typ => bail!("box type {typ:?} not implemented"),
             }
 
-            if c.position() == size as u64 {
+            if c.position() == start + size as u64 {
                 break;
             }
         }

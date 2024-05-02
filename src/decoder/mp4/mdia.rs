@@ -21,7 +21,8 @@ impl Mdia {
         loop {
             let mut box_size = [0u8; 4];
             c.read_exact(&mut box_size)?;
-            let box_size = u32::from_be_bytes(box_size);
+            // subtracting 8 bytes because box_size and box_type belong to the overall box size
+            let box_size = u32::from_be_bytes(box_size) - 8;
 
             let mut box_type = [0u8; 4];
             c.read_exact(&mut box_type)?;
