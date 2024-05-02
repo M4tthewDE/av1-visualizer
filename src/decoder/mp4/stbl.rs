@@ -234,14 +234,14 @@ impl Stbl {
         loop {
             let mut box_size = [0u8; 4];
             c.read_exact(&mut box_size)?;
-            let _box_size = u32::from_be_bytes(box_size);
+            let box_size = u32::from_be_bytes(box_size);
 
             let mut box_type = [0u8; 4];
             c.read_exact(&mut box_type)?;
             let box_type = String::from_utf8(box_type.to_vec())?;
 
             match box_type.as_str() {
-                "stsd" => stsd = Some(Stsd::new(c)?),
+                "stsd" => stsd = Some(Stsd::new(c, box_size)?),
                 "stts" => stts = Some(Stts::new(c)?),
                 "stss" => stss = Some(Stss::new(c)?),
                 "stsc" => stsc = Some(Stsc::new(c)?),

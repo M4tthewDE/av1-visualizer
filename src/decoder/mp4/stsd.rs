@@ -4,12 +4,16 @@ use std::io::{Cursor, Read};
 use anyhow::Result;
 
 use super::av01::Av01;
+#[derive(Clone, Debug)]
+pub enum SampleEntry {
+    Av01(String, u16, Av01),
+    Text(String, u16, Vec<u8>),
+}
 
-#[derive(Clone, Debug, Default)]
-pub struct SampleEntry {
-    pub format: String,
-    pub data_reference_index: u16,
-    pub av01: Av01,
+impl Default for SampleEntry {
+    fn default() -> Self {
+        SampleEntry::Av01(String::default(), u16::default(), Av01::default())
+    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -25,7 +29,7 @@ pub struct Stsd {
 
 impl Stsd {
     #[tracing::instrument(skip_all, name = "stsd")]
-    pub fn new(c: &mut Cursor<Vec<u8>>) -> Result<Stsd> {
+    pub fn new(c: &mut Cursor<Vec<u8>>, size: u32) -> Result<Stsd> {
         let mut version = [0u8; 1];
         c.read_exact(&mut version)?;
 
@@ -46,24 +50,34 @@ impl Stsd {
             c.read_exact(&mut format)?;
             let format = String::from_utf8(format.to_vec())?;
 
-            if format != "av01" {
-                bail!("sample format {format} is not supported");
-            }
+            match format.as_str() {
+                "av01" => {
+                    // reserved
+                    c.set_position(c.position() + 6);
 
-            // reserved
-            c.set_position(c.position() + 6);
+                    let mut data_reference_index = [0u8; 2];
+                    c.read_exact(&mut data_reference_index)?;
+                    let data_reference_index = u16::from_be_bytes(data_reference_index);
 
-            let mut data_reference_index = [0u8; 2];
-            c.read_exact(&mut data_reference_index)?;
-            let data_reference_index = u16::from_be_bytes(data_reference_index);
+                    let av01 = Av01::new(c)?;
 
-            let av01 = Av01::new(c)?;
+                    sample_entries.push(SampleEntry::Av01(format, data_reference_index, av01));
+                }
+                "text" => {
+                    // reserved
+                    c.set_position(c.position() + 6);
 
-            sample_entries.push(SampleEntry {
-                format,
-                data_reference_index,
-                av01,
-            });
+                    let mut data_reference_index = [0u8; 2];
+                    c.read_exact(&mut data_reference_index)?;
+                    let data_reference_index = u16::from_be_bytes(data_reference_index);
+
+                    let mut data = vec![0u8; size as usize - 32];
+                    c.read_exact(&mut data)?;
+                    dbg!(c.position());
+                    sample_entries.push(SampleEntry::Text(format, data_reference_index, data));
+                }
+                _ => bail!("sample format {format} is not supported"),
+            };
         }
 
         Ok(Stsd {
