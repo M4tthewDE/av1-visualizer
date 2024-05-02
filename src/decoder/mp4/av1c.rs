@@ -1,6 +1,7 @@
 use std::io::{Cursor, Read};
 
 use anyhow::{bail, Result};
+use tracing::warn;
 
 /// https://aomediacodec.github.io/av1-isobmff/#av1sampleentry-section
 #[derive(Clone, Debug, Default)]
@@ -57,7 +58,8 @@ impl Av1C {
         };
 
         let mut config_obus = Vec::new();
-        // unsure why we need to subtract 12 here
+        // subtract 4 bytes we parsed previously
+        // 8 bytes for box type and size?
         for _ in 0..size - 12 {
             let mut co = [0u8; 1];
             c.read_exact(&mut co)?;

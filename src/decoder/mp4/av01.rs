@@ -68,12 +68,9 @@ impl Av01 {
         c.read_exact(&mut frame_count)?;
         let frame_count = u16::from_be_bytes(frame_count);
 
-        let mut compressor_name = [0u8; 4];
+        let mut compressor_name = [0u8; 32];
         c.read_exact(&mut compressor_name)?;
         let compressor_name = String::from_utf8(compressor_name.to_vec())?;
-
-        // unsure why we need to skip 28 bytes here
-        c.set_position(c.position() + 28);
 
         let mut depth = [0u8; 2];
         c.read_exact(&mut depth)?;
