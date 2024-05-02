@@ -224,9 +224,7 @@ pub struct Stbl {
 
 impl Stbl {
     #[tracing::instrument(skip_all, name = "stbl")]
-    pub fn new(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Stbl> {
-        let start = c.position();
-
+    pub fn new(c: &mut Cursor<Vec<u8>>, start: u64, size: u32) -> Result<Stbl> {
         let mut stsd = None;
         let mut stts = None;
         let mut stss = None;

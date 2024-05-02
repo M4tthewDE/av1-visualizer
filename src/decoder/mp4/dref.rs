@@ -28,9 +28,7 @@ pub struct Dref {
 
 impl Dref {
     #[tracing::instrument(skip_all, name = "dref")]
-    pub fn new(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Dref> {
-        let start = c.position();
-
+    pub fn new(c: &mut Cursor<Vec<u8>>, start: u64, size: u32) -> Result<Dref> {
         let mut version = [0u8; 1];
         c.read_exact(&mut version)?;
 
@@ -84,10 +82,8 @@ impl Dref {
                 e => bail!("unknown entry_type {e}"),
             }
         }
-        // ignore malformed end of dref
-        // TODO: unsure why we need to subtract 8 bytes here
-        // without it, stbl is skipped
-        c.set_position(start + size as u64 - 8);
+
+        c.set_position(start + size as u64);
 
         Ok(Dref {
             version: version[0],

@@ -24,6 +24,7 @@ impl Moov {
         let mut traks = Vec::new();
 
         loop {
+            let box_start = c.position();
             let mut box_size = [0u8; 4];
             c.read_exact(&mut box_size)?;
             let box_size = u32::from_be_bytes(box_size);
@@ -34,7 +35,7 @@ impl Moov {
 
             match box_type.as_str() {
                 "mvhd" => mvhd = Some(Mvhd::new(c)?),
-                "trak" => traks.push(Trak::new(c, box_size as usize)?),
+                "trak" => traks.push(Trak::new(c, box_start, box_size)?),
                 typ => bail!("box type {typ:?} not implemented"),
             }
 

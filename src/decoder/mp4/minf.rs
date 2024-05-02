@@ -14,17 +14,16 @@ pub struct Minf {
 
 impl Minf {
     #[tracing::instrument(skip_all, name = "minf")]
-    pub fn new(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Minf> {
-        let start = c.position();
-
+    pub fn new(c: &mut Cursor<Vec<u8>>, start: u64, size: u32) -> Result<Minf> {
         let mut vmhd = None;
         let mut dinf = None;
         let mut stbl = None;
         loop {
+            let box_start = c.position();
+
             let mut box_size = [0u8; 4];
             c.read_exact(&mut box_size)?;
-            // subtracting 8 bytes because box_size and box_type belong to the overall box size
-            let box_size = u32::from_be_bytes(box_size) - 8;
+            let box_size = u32::from_be_bytes(box_size);
 
             let mut box_type = [0u8; 4];
             c.read_exact(&mut box_type)?;
@@ -33,7 +32,7 @@ impl Minf {
             match box_type.as_str() {
                 "dinf" => dinf = Some(Dinf::new(c)?),
                 "vmhd" => vmhd = Some(Vmhd::new(c)?),
-                "stbl" => stbl = Some(Stbl::new(c, box_size as usize)?),
+                "stbl" => stbl = Some(Stbl::new(c, box_start, box_size)?),
                 typ => bail!("box type {typ:?} not implemented"),
             }
 

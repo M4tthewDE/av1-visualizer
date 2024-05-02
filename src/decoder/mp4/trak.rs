@@ -15,15 +15,14 @@ pub struct Trak {
 
 impl Trak {
     #[tracing::instrument(skip_all, name = "trak")]
-    pub fn new(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Trak> {
-        // subtract 8 from start because we already parsed box_size and box_type
-        let start = c.position() - 8;
-
+    pub fn new(c: &mut Cursor<Vec<u8>>, start: u64, size: u32) -> Result<Trak> {
         let mut tkhd = None;
         let mut edts = None;
         let mut tref = None;
         let mut mdia = None;
         loop {
+            let box_start = c.position();
+
             let mut box_size = [0u8; 4];
             c.read_exact(&mut box_size)?;
             let box_size = u32::from_be_bytes(box_size);
@@ -36,7 +35,7 @@ impl Trak {
                 "tkhd" => tkhd = Some(Tkhd::new(c)?),
                 "edts" => edts = Some(Edts::new(c)?),
                 "tref" => tref = Some(Tref::new(c, box_size as usize)?),
-                "mdia" => mdia = Some(Mdia::new(c, box_size as usize)?),
+                "mdia" => mdia = Some(Mdia::new(c, box_start, box_size)?),
                 typ => bail!("box type {typ:?} not implemented"),
             }
 

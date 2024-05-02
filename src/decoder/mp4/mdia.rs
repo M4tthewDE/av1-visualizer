@@ -15,17 +15,16 @@ pub struct Mdia {
 
 impl Mdia {
     #[tracing::instrument(skip_all, name = "mdia")]
-    pub fn new(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Mdia> {
-        // subtract 8 from start because we already parsed box_size and box_type
-        let start = c.position() - 8;
+    pub fn new(c: &mut Cursor<Vec<u8>>, start: u64, size: u32) -> Result<Mdia> {
         let mut mdhd = None;
         let mut hdlr = None;
         let mut minf = None;
         loop {
+            let box_start = c.position();
+
             let mut box_size = [0u8; 4];
             c.read_exact(&mut box_size)?;
-            // subtracting 8 bytes because box_size and box_type belong to the overall box size
-            let box_size = u32::from_be_bytes(box_size) - 8;
+            let box_size = u32::from_be_bytes(box_size);
 
             let mut box_type = [0u8; 4];
             c.read_exact(&mut box_type)?;
@@ -34,7 +33,7 @@ impl Mdia {
             match box_type.as_str() {
                 "mdhd" => mdhd = Some(Mdhd::new(c)?),
                 "hdlr" => hdlr = Some(Hdlr::new(c)?),
-                "minf" => minf = Some(Minf::new(c, box_size as usize)?),
+                "minf" => minf = Some(Minf::new(c, box_start, box_size)?),
                 typ => bail!("box type {typ:?} not implemented"),
             }
 
