@@ -32,14 +32,11 @@ impl Hdlr {
         c.read_exact(&mut handler_type)?;
         let handler_type = String::from_utf8(handler_type.to_vec())?;
 
-        dbg!(&handler_type);
-
         let mut reserved = [0u8; 12];
         c.read_exact(&mut reserved)?;
 
         let mut name = Vec::new();
         c.read_until(b'\0', &mut name)?;
-        dbg!(name.len());
         name.remove(name.len() - 1);
 
         Ok(Hdlr {
