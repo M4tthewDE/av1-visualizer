@@ -16,14 +16,16 @@ pub struct Moov {
     pub mvhd: Mvhd,
     pub traks: Vec<Trak>,
     pub udta: Option<Udta>,
+    pub mdat: Option<Vec<u8>>,
 }
 
 impl Moov {
     #[tracing::instrument(skip_all, name = "moov")]
-    pub fn new(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Moov> {
+    pub fn new(c: &mut Cursor<Vec<u8>>, start: u64, size: u32) -> Result<Moov> {
         let mut mvhd = None;
         let mut traks = Vec::new();
         let mut udta = None;
+        let mut mdat = None;
 
         loop {
             let box_start = c.position();
@@ -39,11 +41,15 @@ impl Moov {
                 "mvhd" => mvhd = Some(Mvhd::new(c)?),
                 "trak" => traks.push(Trak::new(c, box_start, box_size)?),
                 "udta" => udta = Some(Udta::new(c, box_start, box_size)?),
-                "free" => c.set_position(c.position() + box_size as u64 - 8),
+                "mdat" => {
+                    let mut data = vec![0u8; box_size as usize];
+                    c.read_exact(&mut data)?;
+                    mdat = Some(data.to_vec())
+                }
                 typ => bail!("box type {typ:?} not implemented"),
             }
 
-            if c.position() == size as u64 {
+            if c.position() == start + size as u64 {
                 break;
             }
         }
@@ -56,6 +62,7 @@ impl Moov {
             mvhd: mvhd.context("no mvhd found")?,
             traks,
             udta,
+            mdat,
         })
     }
 }

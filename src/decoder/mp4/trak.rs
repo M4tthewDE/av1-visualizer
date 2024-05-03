@@ -1,7 +1,7 @@
 use std::io::{Cursor, Read};
 
 use anyhow::{bail, Context, Result};
-use tracing::{info, warn};
+use tracing::warn;
 
 use super::{edts::Edts, mdia::Mdia, tkhd::Tkhd, tref::Tref};
 
@@ -44,14 +44,11 @@ impl Trak {
             }
         }
 
-        let trak = Trak {
+        Ok(Trak {
             tkhd: tkhd.context("no tkhd found")?,
             edts,
             tref,
             mdia: mdia.context("no tkhd found")?,
-        };
-
-        info!("trak: {trak:?}");
-        Ok(trak)
+        })
     }
 }

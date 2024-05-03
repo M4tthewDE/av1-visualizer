@@ -36,8 +36,9 @@ mod vmhd;
 
 #[derive(Clone, Debug, Default)]
 pub struct Mp4 {
-    ftyp: Ftyp,
-    moov: Moov,
+    pub ftyp: Ftyp,
+    pub moov: Moov,
+    pub mdat: Option<Vec<u8>>,
 }
 
 impl Mp4 {
@@ -56,6 +57,8 @@ impl Mp4 {
         let size = data.len();
         let mut c = Cursor::new(data);
         loop {
+            let box_start = c.position();
+
             let mut box_size = [0u8; 4];
             c.read_exact(&mut box_size)?;
             let box_size = u32::from_be_bytes(box_size);
@@ -66,7 +69,13 @@ impl Mp4 {
 
             match box_type.as_str() {
                 "ftyp" => self.ftyp = Ftyp::new(&mut c, box_size as usize)?,
-                "moov" => self.moov = Moov::new(&mut c, box_size as usize)?,
+                "moov" => self.moov = Moov::new(&mut c, box_start, box_size)?,
+                "free" => c.set_position(c.position() + box_size as u64 - 8),
+                "mdat" => {
+                    let mut data = vec![0u8; box_size as usize - 8];
+                    c.read_exact(&mut data)?;
+                    self.mdat = Some(data.to_vec())
+                }
                 typ => bail!("box type {typ:?} not implemented"),
             }
 

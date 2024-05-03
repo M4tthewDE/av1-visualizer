@@ -1,7 +1,6 @@
 use std::io::{Cursor, Read};
 
 use anyhow::Result;
-use tracing::info;
 
 use crate::decoder::mp4::{fixed16, fixed32};
 
@@ -94,7 +93,7 @@ impl Mvhd {
         let mut next_track_id = [0u8; 4];
         c.read_exact(&mut next_track_id)?;
 
-        let mvhd = Mvhd {
+        Ok(Mvhd {
             version: version[0],
             creation_time: u32::from_be_bytes(creation_time),
             modification_time: u32::from_be_bytes(modification_time),
@@ -105,9 +104,6 @@ impl Mvhd {
             matrix,
             pre_defined,
             next_track_id: u32::from_be_bytes(next_track_id),
-        };
-        info!("mvhd: {mvhd:?}");
-
-        Ok(mvhd)
+        })
     }
 }

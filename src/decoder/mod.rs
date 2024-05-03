@@ -10,7 +10,11 @@ mod mp4;
 #[tracing::instrument]
 pub fn decode(p: PathBuf) -> Result<()> {
     let mp4 = Mp4::new(p)?;
-    info!("mp4: {mp4:?}");
+    info!("ftyp: {:?}", mp4.ftyp);
+    info!("moov: {:?}", mp4.moov);
+    if let Some(mdat) = &mp4.mdat {
+        info!("mdat: {:?} bytes", mdat.len());
+    }
 
     Ok(())
 }

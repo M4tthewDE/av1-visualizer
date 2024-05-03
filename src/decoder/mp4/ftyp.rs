@@ -1,6 +1,5 @@
 use anyhow::Result;
 use std::io::{Cursor, Read};
-use tracing::info;
 
 /// Identifies the specifications to which this file complies.
 ///
@@ -29,7 +28,6 @@ impl Ftyp {
         let mut minor_version = [0u8; 4];
         c.read_exact(&mut minor_version)?;
         let minor_version = u32::from_be_bytes(minor_version);
-        info!("major_brand: {major_brand}, minor_version: {minor_version}",);
 
         let mut compatible_brands = Vec::new();
         for _ in 0..size / 8 {
@@ -37,8 +35,6 @@ impl Ftyp {
             c.read_exact(&mut brand)?;
             compatible_brands.push(String::from_utf8(brand.to_vec())?);
         }
-
-        info!("brands: {compatible_brands:?}");
 
         Ok(Ftyp {
             major_brand,
