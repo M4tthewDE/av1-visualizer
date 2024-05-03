@@ -39,6 +39,7 @@ impl Moov {
                 "mvhd" => mvhd = Some(Mvhd::new(c)?),
                 "trak" => traks.push(Trak::new(c, box_start, box_size)?),
                 "udta" => udta = Some(Udta::new(c, box_start, box_size)?),
+                "free" => c.set_position(c.position() + box_size as u64 - 8),
                 typ => bail!("box type {typ:?} not implemented"),
             }
 
