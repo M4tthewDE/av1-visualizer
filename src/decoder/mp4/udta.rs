@@ -6,12 +6,14 @@ use super::meta::Meta;
 #[derive(Clone, Debug, Default)]
 pub struct Udta {
     pub meta: Meta,
+    pub chpl: Option<Vec<u8>>,
 }
 
 impl Udta {
     #[tracing::instrument(skip_all, name = "udta")]
     pub fn new(c: &mut Cursor<Vec<u8>>, start: u64, size: u32) -> Result<Udta> {
         let mut meta = None;
+        let mut chpl = None;
         loop {
             let box_start = c.position();
 
@@ -25,6 +27,11 @@ impl Udta {
 
             match box_type.as_str() {
                 "meta" => meta = Some(Meta::new(c, box_start, box_size)?),
+                "chpl" => {
+                    let mut data = vec![0u8; box_size as usize - 8];
+                    c.read_exact(&mut data)?;
+                    chpl = Some(data.to_vec())
+                }
                 typ => bail!("box type {typ:?} not implemented"),
             }
 
@@ -35,6 +42,7 @@ impl Udta {
 
         Ok(Udta {
             meta: meta.context("no meta found")?,
+            chpl,
         })
     }
 }
