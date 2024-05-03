@@ -3,7 +3,7 @@ use std::io::{Cursor, Read};
 
 use anyhow::bail;
 
-use super::{mvhd::Mvhd, trak::Trak};
+use super::{mvhd::Mvhd, trak::Trak, udta::Udta};
 
 /// The metadata for a presentation is stored in the single Movie Box which occurs at the top‐level of a file.
 /// Normally this box is close to the beginning or end of the file, though this is not required.
@@ -15,6 +15,7 @@ use super::{mvhd::Mvhd, trak::Trak};
 pub struct Moov {
     pub mvhd: Mvhd,
     pub traks: Vec<Trak>,
+    pub udta: Option<Udta>,
 }
 
 impl Moov {
@@ -22,6 +23,7 @@ impl Moov {
     pub fn new(c: &mut Cursor<Vec<u8>>, size: usize) -> Result<Moov> {
         let mut mvhd = None;
         let mut traks = Vec::new();
+        let mut udta = None;
 
         loop {
             let box_start = c.position();
@@ -36,6 +38,7 @@ impl Moov {
             match box_type.as_str() {
                 "mvhd" => mvhd = Some(Mvhd::new(c)?),
                 "trak" => traks.push(Trak::new(c, box_start, box_size)?),
+                "udta" => udta = Some(Udta::new(c, box_start, box_size)?),
                 typ => bail!("box type {typ:?} not implemented"),
             }
 
@@ -51,6 +54,7 @@ impl Moov {
         Ok(Moov {
             mvhd: mvhd.context("no mvhd found")?,
             traks,
+            udta,
         })
     }
 }

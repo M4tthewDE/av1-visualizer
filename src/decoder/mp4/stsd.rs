@@ -73,7 +73,6 @@ impl Stsd {
 
                     let mut data = vec![0u8; size as usize - 32];
                     c.read_exact(&mut data)?;
-                    dbg!(c.position());
                     sample_entries.push(SampleEntry::Text(format, data_reference_index, data));
                 }
                 _ => bail!("sample format {format} is not supported"),

@@ -19,6 +19,7 @@ mod gmhd;
 mod hdlr;
 mod mdhd;
 mod mdia;
+mod meta;
 mod minf;
 mod moov;
 mod mvhd;
@@ -27,6 +28,7 @@ mod stsd;
 mod tkhd;
 mod trak;
 mod tref;
+mod udta;
 mod vmhd;
 
 // reference:
