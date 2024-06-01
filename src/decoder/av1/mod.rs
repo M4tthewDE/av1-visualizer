@@ -1,3 +1,5 @@
+use tracing::info;
+
 #[derive(Debug)]
 pub struct BitStream {
     pos: usize,
@@ -14,15 +16,30 @@ impl BitStream {
         self.pos += 1;
         res
     }
-}
 
-fn f(b: &mut BitStream, n: u64) -> u64 {
-    let mut x: u64 = 0;
-    for _ in 0..n {
-        x = 2 * x + b.read_bit() as u64;
+    fn f(self: &mut BitStream, n: u64) -> u64 {
+        let mut x: u64 = 0;
+        for _ in 0..n {
+            x = 2 * x + self.read_bit() as u64;
+        }
+
+        x
     }
 
-    x
+    fn leb128(self: &mut BitStream) -> u64 {
+        let mut value = 0;
+
+        for i in 0..8 {
+            let leb128_byte = self.f(8);
+            value |= (leb128_byte & 0x7f) << (i * 7);
+
+            if (leb128_byte & 0x80) == 0 {
+                break;
+            }
+        }
+
+        value
+    }
 }
 
 #[derive(Debug)]
@@ -49,13 +66,13 @@ pub struct ObuHeader {
 
 impl ObuHeader {
     pub fn new(b: &mut BitStream) -> ObuHeader {
-        let forbidden_bit = f(b, 1);
+        let forbidden_bit = b.f(1);
         assert_eq!(forbidden_bit, 0);
 
-        let obu_type = ObuType::new(f(b, 4));
-        let extension_flag = f(b, 1) != 0;
-        let has_size = f(b, 1) != 0;
-        let _reserved_bit = f(b, 1);
+        let obu_type = ObuType::new(b.f(4));
+        let extension_flag = b.f(1) != 0;
+        let has_size = b.f(1) != 0;
+        let _reserved_bit = b.f(1);
 
         if extension_flag {
             todo!("parse extension header");
@@ -73,6 +90,13 @@ pub struct Obu {
 impl Obu {
     pub fn new(b: &mut BitStream) -> Obu {
         let header = ObuHeader::new(b);
+        let size = if header.has_size {
+            b.leb128()
+        } else {
+            todo!("where does sz come from?");
+        };
+
+        info!("size: {size}");
 
         Obu { header }
     }
