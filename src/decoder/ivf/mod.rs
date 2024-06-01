@@ -107,8 +107,10 @@ impl Display for Block {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "len_frame: {}, timestamp: {}",
-            self.len_frame, self.timestamp
+            "len_frame: {}, timestamp: {}, framedata: {:02X?}",
+            self.len_frame,
+            self.timestamp,
+            &self.framedata[0..10]
         )
     }
 }
