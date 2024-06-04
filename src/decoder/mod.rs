@@ -3,10 +3,7 @@ use std::path::PathBuf;
 use anyhow::{bail, Result};
 use tracing::info;
 
-use crate::decoder::{
-    av1::{BitStream, Obu},
-    ivf::Ivf,
-};
+use crate::decoder::ivf::Ivf;
 
 use self::mp4::Mp4;
 
@@ -47,13 +44,8 @@ pub fn decode_ivf(p: PathBuf) -> Result<()> {
     info!("ivf: {}", ivf);
     info!("block 1: {}", ivf.blocks[0]);
 
-    for block in &ivf.blocks {
-        let mut b = BitStream::new(block.framedata.clone());
-        loop {
-            let obu = Obu::new(&mut b);
-            info!("obu: {:?}", obu);
-        }
+    match ivf.fourcc.as_str() {
+        "AV01" => av1::decode(ivf),
+        _ => panic!("unknown ivf fourcc: {}", ivf.fourcc),
     }
-
-    Ok(())
 }
