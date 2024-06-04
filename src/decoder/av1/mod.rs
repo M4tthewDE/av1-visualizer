@@ -265,7 +265,7 @@ impl ColorPrimaries {
     fn new(val: u64) -> ColorPrimaries {
         match val {
             2 => ColorPrimaries::Unspecified,
-            v => panic!("invalid value for ColorPrimaries: {val}"),
+            _ => panic!("invalid value for ColorPrimaries: {val}"),
         }
     }
 }
@@ -281,7 +281,7 @@ impl TransferCharacteristics {
         match val {
             2 => TransferCharacteristics::Unspecified,
             13 => TransferCharacteristics::Srgb,
-            v => panic!("invalid value for TransferCharacterstics: {val}"),
+            _ => panic!("invalid value for TransferCharacterstics: {val}"),
         }
     }
 }
@@ -297,7 +297,7 @@ impl MatrixCoefficients {
         match val {
             0 => MatrixCoefficients::Identity,
             2 => MatrixCoefficients::Unspecified,
-            v => panic!("invalid value for MatrixCoefficients: {val}"),
+            _ => panic!("invalid value for MatrixCoefficients: {val}"),
         }
     }
 }
@@ -315,12 +315,10 @@ impl ColorConfig {
             } else {
                 10
             }
+        } else if high_bitdepth {
+            10
         } else {
-            if high_bitdepth {
-                10
-            } else {
-                8
-            }
+            8
         };
 
         let monochrome = if seq_profile == 1 { false } else { b.f(1) != 0 };
@@ -353,17 +351,15 @@ impl ColorConfig {
                 (true, true)
             } else if seq_profile == 1 {
                 (false, false)
-            } else {
-                if bit_depth == 12 {
-                    let sub_x = b.f(1) != 0;
-                    if sub_x {
-                        (sub_x, b.f(1) != 0)
-                    } else {
-                        (sub_x, false)
-                    }
+            } else if bit_depth == 12 {
+                let sub_x = b.f(1) != 0;
+                if sub_x {
+                    (sub_x, b.f(1) != 0)
                 } else {
-                    (true, false)
+                    (sub_x, false)
                 }
+            } else {
+                (true, false)
             };
 
             if subsampling_x && subsampling_y {

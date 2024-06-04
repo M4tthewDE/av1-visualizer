@@ -53,7 +53,6 @@ pub fn decode_ivf(p: PathBuf) -> Result<()> {
             let obu = Obu::new(&mut b);
             info!("obu: {:?}", obu);
         }
-        panic!("done with first block");
     }
 
     Ok(())
