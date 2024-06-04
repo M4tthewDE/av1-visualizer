@@ -54,14 +54,23 @@ impl BitStream {
     }
 }
 
-pub fn decode(ivf: Ivf) -> Result<()> {
-    for block in &ivf.blocks {
-        let mut b = BitStream::new(block.framedata.clone());
-        loop {
-            let obu = Obu::new(&mut b);
-            info!("obu: {:?}", obu);
-        }
+#[derive(Debug)]
+pub struct Decoder {}
+
+impl Decoder {
+    pub fn new() -> Decoder {
+        Decoder {}
     }
 
-    Ok(())
+    pub fn decode(&self, ivf: Ivf) -> Result<()> {
+        for block in &ivf.blocks {
+            let mut b = BitStream::new(block.framedata.clone());
+            loop {
+                let obu = Obu::new(&mut b);
+                info!("obu: {:?}", obu);
+            }
+        }
+
+        Ok(())
+    }
 }

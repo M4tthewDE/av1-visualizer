@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::{bail, Result};
+use av1::Decoder;
 use tracing::info;
 
 use crate::decoder::ivf::Ivf;
@@ -45,7 +46,10 @@ pub fn decode_ivf(p: PathBuf) -> Result<()> {
     info!("block 1: {}", ivf.blocks[0]);
 
     match ivf.fourcc.as_str() {
-        "AV01" => av1::decode(ivf),
+        "AV01" => {
+            let decoder = Decoder::new();
+            decoder.decode(ivf)
+        }
         _ => panic!("unknown ivf fourcc: {}", ivf.fourcc),
     }
 }
