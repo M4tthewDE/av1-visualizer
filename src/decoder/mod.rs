@@ -49,8 +49,10 @@ pub fn decode_ivf(p: PathBuf) -> Result<()> {
 
     for block in &ivf.blocks {
         let mut b = BitStream::new(block.framedata.clone());
-        let obu = Obu::new(&mut b);
-        info!("obu: {:?}", obu);
+        loop {
+            let obu = Obu::new(&mut b);
+            info!("obu: {:?}", obu);
+        }
         panic!("done with first block");
     }
 
