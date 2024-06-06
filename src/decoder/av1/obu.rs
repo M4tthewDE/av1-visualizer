@@ -1,6 +1,6 @@
 use tracing::info;
 
-use super::BitStream;
+use super::{BitDepth, BitStream, Decoder, NumPlanes};
 
 #[derive(Debug, Clone)]
 pub enum ObuType {
@@ -48,14 +48,32 @@ impl ObuHeader {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum SeqProfile {
+    Zero = 0,
+    One = 1,
+    Two = 2,
+}
+
+impl SeqProfile {
+    fn new(val: u64) -> Self {
+        match val {
+            0 => Self::Zero,
+            1 => Self::One,
+            2 => Self::Two,
+            _ => panic!("invalid seq_profile: {val}"),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum Obu {
     TemporalDelimiter { header: ObuHeader },
     SequenceHeader { header: ObuHeader },
 }
 
-impl Obu {
-    pub fn new(b: &mut BitStream) -> Obu {
+impl Decoder {
+    pub fn obu(&mut self, b: &mut BitStream) -> Obu {
         let header = ObuHeader::new(b);
         let size = if header.has_size {
             b.leb128()
@@ -70,7 +88,7 @@ impl Obu {
         let obu_type = header.obu_type.clone();
 
         let obu = match obu_type {
-            ObuType::SequenceHeader => Obu::sequence_header(b, header),
+            ObuType::SequenceHeader => self.sequence_header(b, header),
             ObuType::TemporalDelimiter => {
                 b.seen_frame_header = false;
                 Obu::TemporalDelimiter { header }
@@ -99,8 +117,8 @@ impl Obu {
         obu
     }
 
-    fn sequence_header(b: &mut BitStream, header: ObuHeader) -> Obu {
-        let seq_profile = b.f(3);
+    fn sequence_header(&mut self, b: &mut BitStream, header: ObuHeader) -> Obu {
+        let seq_profile = SeqProfile::new(b.f(3));
         let _still_picture = b.f(1) != 0;
         let reduced_still_picture_header = b.f(1) != 0;
 
@@ -202,7 +220,7 @@ impl Obu {
         let _enable_superres = b.f(1) != 0;
         let _enable_cdef = b.f(1) != 0;
         let _enable_restoration = b.f(1) != 0;
-        let _color_config = ColorConfig::new(b, seq_profile);
+        let _color_config = self.color_config(b, seq_profile);
         let _film_grain_present = b.f(1) != 0;
 
         Obu::SequenceHeader { header }
@@ -256,27 +274,62 @@ impl MatrixCoefficients {
     }
 }
 
-#[derive(Debug)]
-pub struct ColorConfig {}
+#[derive(Debug, Copy, Clone)]
+pub enum ChromaSamplePosition {
+    Unknown = 0,
+    Vertical = 1,
+    Colocated = 2,
+    Reserved = 3,
+}
 
-impl ColorConfig {
-    fn new(b: &mut BitStream, seq_profile: u64) -> ColorConfig {
+impl ChromaSamplePosition {
+    fn new(val: u64) -> Self {
+        match val {
+            0 => Self::Unknown,
+            1 => Self::Vertical,
+            2 => Self::Colocated,
+            3 => Self::Reserved,
+            _ => panic!("invalid seq_profile: {val}"),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ColorConfig {
+    pub separate_uv_delta_q: bool,
+    pub color_range: bool,
+    pub subsampling_x: bool,
+    pub subsampling_y: bool,
+    pub chroma_sample_position: ChromaSamplePosition,
+}
+
+impl Decoder {
+    fn color_config(&mut self, b: &mut BitStream, seq_profile: SeqProfile) -> ColorConfig {
         let high_bitdepth = b.f(1) != 0;
 
-        let bit_depth = if seq_profile == 2 && high_bitdepth {
+        self.bit_depth = if seq_profile as u64 == 2 && high_bitdepth {
             if b.f(1) != 0 {
-                12
+                BitDepth::Twelve
             } else {
-                10
+                BitDepth::Ten
             }
-        } else if high_bitdepth {
-            10
+        } else if seq_profile as u64 <= 2 && high_bitdepth {
+            BitDepth::Ten
         } else {
-            8
+            BitDepth::Eight
         };
 
-        let monochrome = if seq_profile == 1 { false } else { b.f(1) != 0 };
-        let _num_planes = if monochrome { 1 } else { 3 };
+        let monochrome = if seq_profile as u64 == 1 {
+            false
+        } else {
+            b.f(1) != 0
+        };
+
+        self.num_planes = if monochrome {
+            NumPlanes::One
+        } else {
+            NumPlanes::Three
+        };
 
         let (color_primaries, transfer_characteristics, matrix_coefficients) = if b.f(1) != 0 {
             (
@@ -292,37 +345,57 @@ impl ColorConfig {
             )
         };
 
+        let color_range: bool;
+        let subsampling_x: bool;
+        let subsampling_y: bool;
+        let mut chroma_sample_position = ChromaSamplePosition::Unknown;
+
         if monochrome {
-            todo!("monochrome == true");
+            return ColorConfig {
+                separate_uv_delta_q: false,
+                color_range: b.f(1) != 0,
+                subsampling_x: true,
+                subsampling_y: true,
+                chroma_sample_position,
+            };
         } else if matches!(color_primaries, ColorPrimaries::Bt709)
             && matches!(transfer_characteristics, TransferCharacteristics::Srgb)
             && matches!(matrix_coefficients, MatrixCoefficients::Identity)
         {
-            todo!();
+            color_range = true;
+            subsampling_x = false;
+            subsampling_y = false;
         } else {
-            let _color_range = b.f(1);
-            let (subsampling_x, subsampling_y) = if seq_profile == 0 {
-                (true, true)
-            } else if seq_profile == 1 {
-                (false, false)
-            } else if bit_depth == 12 {
-                let sub_x = b.f(1) != 0;
-                if sub_x {
-                    (sub_x, b.f(1) != 0)
+            color_range = b.f(1) != 0;
+            if seq_profile as u64 == 0 {
+                subsampling_x = true;
+                subsampling_y = true;
+            } else if seq_profile as u64 == 1 {
+                subsampling_x = false;
+                subsampling_y = false;
+            } else if self.bit_depth as u64 == 12 {
+                subsampling_x = b.f(1) != 0;
+                if subsampling_x {
+                    subsampling_y = b.f(1) != 0;
                 } else {
-                    (sub_x, false)
+                    subsampling_y = false;
                 }
             } else {
-                (true, false)
-            };
+                subsampling_x = true;
+                subsampling_y = false;
+            }
 
             if subsampling_x && subsampling_y {
-                let _chroma_sample_position = b.f(2);
+                chroma_sample_position = ChromaSamplePosition::new(b.f(2));
             }
         }
 
-        let _separate_uv_delta_q = b.f(1) != 0;
-
-        ColorConfig {}
+        ColorConfig {
+            separate_uv_delta_q: b.f(1) != 0,
+            color_range,
+            subsampling_x,
+            subsampling_y,
+            chroma_sample_position,
+        }
     }
 }

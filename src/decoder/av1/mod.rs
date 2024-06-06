@@ -1,5 +1,4 @@
 use anyhow::Result;
-use obu::Obu;
 use tracing::info;
 
 use super::ivf::Ivf;
@@ -54,19 +53,44 @@ impl BitStream {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum BitDepth {
+    Invalid = -1,
+    Eight = 8,
+    Ten = 10,
+    Twelve = 12,
+}
+
+impl Default for BitDepth {
+    fn default() -> Self {
+        Self::Invalid
+    }
+}
+
 #[derive(Debug)]
-pub struct Decoder {}
+pub enum NumPlanes {
+    One = 1,
+    Three = 3,
+}
+
+impl Default for NumPlanes {
+    fn default() -> Self {
+        Self::One
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct Decoder {
+    pub bit_depth: BitDepth,
+    pub num_planes: NumPlanes,
+}
 
 impl Decoder {
-    pub fn new() -> Decoder {
-        Decoder {}
-    }
-
-    pub fn decode(&self, ivf: Ivf) -> Result<()> {
+    pub fn decode(&mut self, ivf: Ivf) -> Result<()> {
         for block in &ivf.blocks {
             let mut b = BitStream::new(block.framedata.clone());
             loop {
-                let obu = Obu::new(&mut b);
+                let obu = self.obu(&mut b);
                 info!("obu: {:?}", obu);
             }
         }

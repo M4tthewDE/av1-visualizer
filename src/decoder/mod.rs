@@ -47,7 +47,7 @@ pub fn decode_ivf(p: PathBuf) -> Result<()> {
 
     match ivf.fourcc.as_str() {
         "AV01" => {
-            let decoder = Decoder::new();
+            let mut decoder = Decoder::default();
             decoder.decode(ivf)
         }
         _ => panic!("unknown ivf fourcc: {}", ivf.fourcc),
