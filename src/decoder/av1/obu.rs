@@ -229,13 +229,14 @@ impl Decoder {
 
 #[derive(Debug)]
 enum ColorPrimaries {
-    Unspecified,
-    Bt709,
+    Bt709 = 1,
+    Unspecified = 2,
 }
 
 impl ColorPrimaries {
     fn new(val: u64) -> ColorPrimaries {
         match val {
+            1 => ColorPrimaries::Bt709,
             2 => ColorPrimaries::Unspecified,
             _ => panic!("invalid value for ColorPrimaries: {val}"),
         }
@@ -244,8 +245,8 @@ impl ColorPrimaries {
 
 #[derive(Debug)]
 enum TransferCharacteristics {
-    Unspecified,
-    Srgb,
+    Unspecified = 2,
+    Srgb = 13,
 }
 
 impl TransferCharacteristics {
@@ -260,8 +261,8 @@ impl TransferCharacteristics {
 
 #[derive(Debug)]
 enum MatrixCoefficients {
-    Unspecified,
-    Identity,
+    Unspecified = 0,
+    Identity = 2,
 }
 
 impl MatrixCoefficients {
