@@ -83,6 +83,7 @@ pub enum Obu {
         seq_tier: Vec<u64>,
         decoder_model_present_for_this_op: Vec<bool>,
         initial_display_delay_present_for_this_op: Vec<bool>,
+        initial_display_delay: Vec<u64>,
         max_frame_width: u64,
         max_frame_height: u64,
         use_128x128_superblock: bool,
@@ -157,11 +158,12 @@ impl Decoder {
         let reduced_still_picture_header = b.f(1) != 0;
 
         let decoder_model_info_present: bool;
-        let mut operating_point_idc: Vec<u64> = Vec::new();
-        let mut seq_level_idx: Vec<u64> = Vec::new();
-        let mut seq_tier: Vec<u64> = Vec::new();
-        let mut decoder_model_present_for_this_op: Vec<bool> = Vec::new();
-        let mut initial_display_delay_present_for_this_op: Vec<bool> = Vec::new();
+        let mut operating_point_idc: Vec<u64>;
+        let mut seq_level_idx: Vec<u64>;
+        let mut seq_tier: Vec<u64>;
+        let decoder_model_present_for_this_op: Vec<bool>;
+        let mut initial_display_delay_present_for_this_op: Vec<bool>;
+        let mut initial_display_delay: Vec<u64> = Vec::new();
         let timing_info_present: bool;
         let initial_display_delay_present: bool;
         let operating_points_cnt: u64;
@@ -171,11 +173,11 @@ impl Decoder {
             decoder_model_info_present = false;
             initial_display_delay_present = false;
             operating_points_cnt = 1;
-            operating_point_idc.push(0);
-            seq_level_idx.push(0);
-            seq_tier.push(0);
-            decoder_model_present_for_this_op.push(false);
-            initial_display_delay_present_for_this_op.push(false);
+            operating_point_idc = vec![0];
+            seq_level_idx = vec![0];
+            seq_tier = vec![0];
+            decoder_model_present_for_this_op = vec![false];
+            initial_display_delay_present_for_this_op = vec![false];
         } else {
             timing_info_present = b.f(1) != 0;
             if timing_info_present {
@@ -187,24 +189,32 @@ impl Decoder {
             initial_display_delay_present = b.f(1) != 0;
             operating_points_cnt = b.f(5) + 1;
 
+            operating_point_idc = vec![0; operating_points_cnt as usize];
+            seq_level_idx = vec![0; operating_points_cnt as usize];
+            seq_tier = vec![0; operating_points_cnt as usize];
+            decoder_model_present_for_this_op = vec![false; operating_points_cnt as usize];
+            initial_display_delay_present_for_this_op = vec![false; operating_points_cnt as usize];
+            initial_display_delay = vec![0; operating_points_cnt as usize];
+
             for i in 0..operating_points_cnt as usize {
-                operating_point_idc.push(b.f(12));
-                seq_level_idx.push(b.f(5));
+                operating_point_idc[i] = b.f(12);
+                seq_level_idx[i] = b.f(5);
 
                 if seq_level_idx[i] > 7 {
-                    seq_tier.push(b.f(1));
+                    seq_tier[i] = b.f(1);
                 } else {
-                    seq_tier.push(0);
+                    seq_tier[i] = 0;
                 }
 
                 if decoder_model_info_present {
                     todo!();
-                } else {
-                    decoder_model_present_for_this_op.push(false);
                 }
 
                 if initial_display_delay_present {
-                    todo!("initial_display_delay_present == true");
+                    initial_display_delay_present_for_this_op[i] = b.f(1) != 0;
+                    if initial_display_delay_present_for_this_op[i] {
+                        initial_display_delay[i] = b.f(4) - 1;
+                    }
                 }
             }
         }
@@ -284,6 +294,7 @@ impl Decoder {
             seq_tier,
             decoder_model_present_for_this_op,
             initial_display_delay_present_for_this_op,
+            initial_display_delay,
             max_frame_width,
             max_frame_height,
             use_128x128_superblock,
