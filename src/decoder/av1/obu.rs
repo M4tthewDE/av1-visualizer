@@ -68,8 +68,31 @@ impl SeqProfile {
 
 #[derive(Debug)]
 pub enum Obu {
-    TemporalDelimiter { header: ObuHeader },
-    SequenceHeader { header: ObuHeader },
+    TemporalDelimiter {
+        header: ObuHeader,
+    },
+    SequenceHeader {
+        header: ObuHeader,
+        still_picture: bool,
+        max_frame_width: u64,
+        max_frame_height: u64,
+        use_128x128_superblock: bool,
+        enable_filter_intra: bool,
+        enable_intra_edge_filter: bool,
+        enable_interintra_compound: bool,
+        enable_masked_compound: bool,
+        enable_warped_motion: bool,
+        enable_dual_filter: bool,
+        enable_order_hint: bool,
+        enable_jnt_comp: bool,
+        enable_ref_frame_mvs: bool,
+        seq_force_integer_mv: u64,
+        enable_superres: bool,
+        enable_cdef: bool,
+        enable_restoration: bool,
+        color_config: ColorConfig,
+        film_grain_params_present: bool,
+    },
 }
 
 impl Decoder {
@@ -117,9 +140,11 @@ impl Decoder {
         obu
     }
 
+    const SELECT_INTEGER_MV: u64 = 2;
+
     fn sequence_header(&mut self, b: &mut BitStream, header: ObuHeader) -> Obu {
         let seq_profile = SeqProfile::new(b.f(3));
-        let _still_picture = b.f(1) != 0;
+        let still_picture = b.f(1) != 0;
         let reduced_still_picture_header = b.f(1) != 0;
 
         let decoder_model_info_present: bool;
@@ -165,8 +190,8 @@ impl Decoder {
 
         let frame_width_bits = b.f(4) + 1;
         let frame_height_bits = b.f(4) + 1;
-        let _max_frame_width = b.f(frame_width_bits) + 1;
-        let _max_frame_height = b.f(frame_height_bits) + 1;
+        let max_frame_width = b.f(frame_width_bits) + 1;
+        let max_frame_height = b.f(frame_height_bits) + 1;
 
         let frame_id_numbers_present = if reduced_still_picture_header {
             false
@@ -178,20 +203,29 @@ impl Decoder {
             todo!("frame_id_numbers_present == true");
         }
 
-        let _use_128x128_superblock = b.f(1) != 0;
-        let _enable_filter_intra = b.f(1) != 0;
-        let _enable_intra_edge_filter = b.f(1) != 0;
+        let use_128x128_superblock = b.f(1) != 0;
+        let enable_filter_intra = b.f(1) != 0;
+        let enable_intra_edge_filter = b.f(1) != 0;
+
+        let enable_interintra_compound: bool;
+        let enable_masked_compound: bool;
+        let enable_warped_motion: bool;
+        let enable_dual_filter: bool;
+        let enable_order_hint: bool;
+        let enable_jnt_comp: bool;
+        let enable_ref_frame_mvs: bool;
+        let seq_force_integer_mv: u64;
 
         if reduced_still_picture_header {
             todo!();
         } else {
-            let _enable_interintra_compound = b.f(1) != 0;
-            let _enable_masked_compound = b.f(1) != 0;
-            let _enable_warped_motion = b.f(1) != 0;
-            let _enable_dual_filter = b.f(1) != 0;
-            let enable_order_hint = b.f(1) != 0;
+            enable_interintra_compound = b.f(1) != 0;
+            enable_masked_compound = b.f(1) != 0;
+            enable_warped_motion = b.f(1) != 0;
+            enable_dual_filter = b.f(1) != 0;
+            enable_order_hint = b.f(1) != 0;
 
-            let (_enable_jnt_comp, _enable_ref_frame_mvs) = if enable_order_hint {
+            (enable_jnt_comp, enable_ref_frame_mvs) = if enable_order_hint {
                 (b.f(1) != 0, b.f(1) != 0)
             } else {
                 (false, false)
@@ -204,9 +238,9 @@ impl Decoder {
                 b.f(1)
             };
 
-            let _seq_force_integer_mv = if seq_force_screen_content_tools > 0 {
+            seq_force_integer_mv = if seq_force_screen_content_tools > 0 {
                 if b.f(1) != 0 {
-                    2
+                    Decoder::SELECT_INTEGER_MV
                 } else {
                     b.f(1)
                 }
@@ -214,16 +248,31 @@ impl Decoder {
                 2
             };
 
-            let _order_hint_bits = if enable_order_hint { b.f(3) + 1 } else { 0 };
+            self.order_hint_bits = if enable_order_hint { b.f(3) + 1 } else { 0 };
         }
 
-        let _enable_superres = b.f(1) != 0;
-        let _enable_cdef = b.f(1) != 0;
-        let _enable_restoration = b.f(1) != 0;
-        let _color_config = self.color_config(b, seq_profile);
-        let _film_grain_present = b.f(1) != 0;
-
-        Obu::SequenceHeader { header }
+        Obu::SequenceHeader {
+            header,
+            still_picture,
+            max_frame_width,
+            max_frame_height,
+            use_128x128_superblock,
+            enable_filter_intra,
+            enable_intra_edge_filter,
+            enable_interintra_compound,
+            enable_masked_compound,
+            enable_warped_motion,
+            enable_dual_filter,
+            enable_order_hint,
+            enable_jnt_comp,
+            enable_ref_frame_mvs,
+            seq_force_integer_mv,
+            enable_superres: b.f(1) != 0,
+            enable_cdef: b.f(1) != 0,
+            enable_restoration: b.f(1) != 0,
+            color_config: self.color_config(b, seq_profile),
+            film_grain_params_present: b.f(1) != 0,
+        }
     }
 }
 

@@ -83,6 +83,7 @@ impl Default for NumPlanes {
 pub struct Decoder {
     pub bit_depth: BitDepth,
     pub num_planes: NumPlanes,
+    pub order_hint_bits: u64,
 }
 
 impl Decoder {
