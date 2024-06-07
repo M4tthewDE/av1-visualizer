@@ -74,6 +74,15 @@ pub enum Obu {
     SequenceHeader {
         header: ObuHeader,
         still_picture: bool,
+        timing_info_present: bool,
+        decoder_model_info_present: bool,
+        initial_display_delay_present: bool,
+        operating_points_cnt: u64,
+        operating_point_idc: Vec<u64>,
+        seq_level_idx: Vec<u64>,
+        seq_tier: Vec<u64>,
+        decoder_model_present_for_this_op: Vec<bool>,
+        initial_display_delay_present_for_this_op: Vec<bool>,
         max_frame_width: u64,
         max_frame_height: u64,
         use_128x128_superblock: bool,
@@ -151,20 +160,32 @@ impl Decoder {
         let mut operating_point_idc: Vec<u64> = Vec::new();
         let mut seq_level_idx: Vec<u64> = Vec::new();
         let mut seq_tier: Vec<u64> = Vec::new();
-        let mut decoder_model_info_present_for_this_op: Vec<bool> = Vec::new();
+        let mut decoder_model_present_for_this_op: Vec<bool> = Vec::new();
+        let mut initial_display_delay_present_for_this_op: Vec<bool> = Vec::new();
+        let timing_info_present: bool;
+        let initial_display_delay_present: bool;
+        let operating_points_cnt: u64;
 
         if reduced_still_picture_header {
-            todo!("reduced_still_picture_header == true");
+            timing_info_present = false;
+            decoder_model_info_present = false;
+            initial_display_delay_present = false;
+            operating_points_cnt = 1;
+            operating_point_idc.push(0);
+            seq_level_idx.push(0);
+            seq_tier.push(0);
+            decoder_model_present_for_this_op.push(false);
+            initial_display_delay_present_for_this_op.push(false);
         } else {
-            let timing_info_present = b.f(1) != 0;
+            timing_info_present = b.f(1) != 0;
             if timing_info_present {
                 todo!("timing_info_present_flag == true");
             } else {
                 decoder_model_info_present = false;
             }
 
-            let initial_display_delay_present = b.f(1) != 0;
-            let operating_points_cnt = b.f(5) + 1;
+            initial_display_delay_present = b.f(1) != 0;
+            operating_points_cnt = b.f(5) + 1;
 
             for i in 0..operating_points_cnt as usize {
                 operating_point_idc.push(b.f(12));
@@ -179,7 +200,7 @@ impl Decoder {
                 if decoder_model_info_present {
                     todo!();
                 } else {
-                    decoder_model_info_present_for_this_op.push(false);
+                    decoder_model_present_for_this_op.push(false);
                 }
 
                 if initial_display_delay_present {
@@ -254,6 +275,15 @@ impl Decoder {
         Obu::SequenceHeader {
             header,
             still_picture,
+            timing_info_present,
+            decoder_model_info_present,
+            initial_display_delay_present,
+            operating_points_cnt,
+            operating_point_idc,
+            seq_level_idx,
+            seq_tier,
+            decoder_model_present_for_this_op,
+            initial_display_delay_present_for_this_op,
             max_frame_width,
             max_frame_height,
             use_128x128_superblock,
