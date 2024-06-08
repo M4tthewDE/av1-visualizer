@@ -97,6 +97,7 @@ pub enum Obu {
         enable_jnt_comp: bool,
         enable_ref_frame_mvs: bool,
         seq_force_integer_mv: u64,
+        seq_force_screen_content_tools: u64,
         enable_superres: bool,
         enable_cdef: bool,
         enable_restoration: bool,
@@ -151,6 +152,7 @@ impl Decoder {
     }
 
     const SELECT_INTEGER_MV: u64 = 2;
+    const SELECT_SCREEN_CONTENT_TOOLS: u64 = 2;
 
     fn sequence_header(&mut self, b: &mut BitStream, header: ObuHeader) -> Obu {
         let seq_profile = SeqProfile::new(b.f(3));
@@ -202,8 +204,6 @@ impl Decoder {
 
                 if seq_level_idx[i] > 7 {
                     seq_tier[i] = b.f(1);
-                } else {
-                    seq_tier[i] = 0;
                 }
 
                 if decoder_model_info_present {
@@ -245,10 +245,20 @@ impl Decoder {
         let enable_order_hint: bool;
         let enable_jnt_comp: bool;
         let enable_ref_frame_mvs: bool;
+        let seq_force_screen_content_tools: u64;
         let seq_force_integer_mv: u64;
 
         if reduced_still_picture_header {
-            todo!();
+            enable_interintra_compound = false;
+            enable_masked_compound = false;
+            enable_warped_motion = false;
+            enable_dual_filter = false;
+            enable_order_hint = false;
+            enable_jnt_comp = false;
+            enable_ref_frame_mvs = false;
+            seq_force_screen_content_tools = Decoder::SELECT_SCREEN_CONTENT_TOOLS;
+            seq_force_integer_mv = Decoder::SELECT_INTEGER_MV;
+            self.order_hint_bits = 0;
         } else {
             enable_interintra_compound = b.f(1) != 0;
             enable_masked_compound = b.f(1) != 0;
@@ -263,8 +273,8 @@ impl Decoder {
             };
 
             let seq_choose_screen_content_tools = b.f(1) != 0;
-            let seq_force_screen_content_tools = if seq_choose_screen_content_tools {
-                2
+            seq_force_screen_content_tools = if seq_choose_screen_content_tools {
+                Decoder::SELECT_SCREEN_CONTENT_TOOLS
             } else {
                 b.f(1)
             };
@@ -308,6 +318,7 @@ impl Decoder {
             enable_jnt_comp,
             enable_ref_frame_mvs,
             seq_force_integer_mv,
+            seq_force_screen_content_tools,
             enable_superres: b.f(1) != 0,
             enable_cdef: b.f(1) != 0,
             enable_restoration: b.f(1) != 0,
