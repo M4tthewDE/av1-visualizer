@@ -84,18 +84,23 @@ pub struct Decoder {
     pub bit_depth: BitDepth,
     pub num_planes: NumPlanes,
     pub order_hint_bits: u64,
+    pub seen_frame_header: bool,
 }
 
 impl Decoder {
     pub fn decode(&mut self, ivf: Ivf) -> Result<()> {
         for block in &ivf.blocks {
             let mut b = BitStream::new(block.framedata.clone());
-            loop {
-                let obu = self.obu(&mut b);
-                info!("obu: {:?}", obu);
-            }
+            self.decode_frame(&mut b);
         }
 
         Ok(())
+    }
+
+    fn decode_frame(&mut self, b: &mut BitStream) {
+        loop {
+            let obu = self.obu(b);
+            info!("obu: {obu:?}");
+        }
     }
 }

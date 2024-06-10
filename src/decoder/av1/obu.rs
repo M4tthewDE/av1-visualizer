@@ -66,6 +66,7 @@ impl SeqProfile {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 pub enum Obu {
     TemporalDelimiter {
@@ -127,7 +128,8 @@ impl Decoder {
                 b.seen_frame_header = false;
                 Obu::TemporalDelimiter { header }
             }
-            t => panic!("obu type not implemented: {t:?}"),
+            ObuType::Frame => self.frame(b),
+            _ => panic!("obu type not implemented: {obu_type:?}"),
         };
 
         let current_position = b.pos;
@@ -325,6 +327,26 @@ impl Decoder {
             color_config: self.color_config(b, seq_profile),
             film_grain_params_present: b.f(1) != 0,
         }
+    }
+
+    fn frame(&mut self, b: &mut BitStream) -> Obu {
+        let start = b.pos;
+        let frame_header = self.frame_header(b);
+        todo!("after frame header parsing");
+    }
+
+    fn frame_header(&mut self, b: &mut BitStream) -> Obu {
+        if self.seen_frame_header {
+            todo!("seen_frame_header == true");
+        } else {
+            self.seen_frame_header = true;
+            let uncompressed_header = self.uncompressed_header(b);
+            todo!("after uncompressed header parsing");
+        }
+    }
+
+    fn uncompressed_header(&mut self, b: &mut BitStream) -> Obu {
+        todo!("uncompressed_header");
     }
 }
 
