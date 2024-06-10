@@ -4,6 +4,7 @@ use super::{BitDepth, BitStream, Decoder, NumPlanes};
 
 #[derive(Debug, Clone)]
 pub enum ObuType {
+    Reserved,
     SequenceHeader,
     TemporalDelimiter,
     TileGroup,
@@ -11,9 +12,16 @@ pub enum ObuType {
     Frame,
 }
 
+impl Default for ObuType {
+    fn default() -> Self {
+        Self::Reserved
+    }
+}
+
 impl ObuType {
     fn new(val: u64) -> ObuType {
         match val {
+            0 => ObuType::Reserved,
             1 => ObuType::SequenceHeader,
             2 => ObuType::TemporalDelimiter,
             4 => ObuType::TileGroup,
@@ -24,7 +32,7 @@ impl ObuType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ObuHeader {
     pub obu_type: ObuType,
     pub has_size: bool,
@@ -66,49 +74,53 @@ impl SeqProfile {
     }
 }
 
-#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
-pub enum Obu {
-    TemporalDelimiter {
-        header: ObuHeader,
-    },
-    SequenceHeader {
-        header: ObuHeader,
-        still_picture: bool,
-        timing_info_present: bool,
-        decoder_model_info_present: bool,
-        initial_display_delay_present: bool,
-        operating_points_cnt: u64,
-        operating_point_idc: Vec<u64>,
-        seq_level_idx: Vec<u64>,
-        seq_tier: Vec<u64>,
-        decoder_model_present_for_this_op: Vec<bool>,
-        initial_display_delay_present_for_this_op: Vec<bool>,
-        initial_display_delay: Vec<u64>,
-        max_frame_width: u64,
-        max_frame_height: u64,
-        use_128x128_superblock: bool,
-        enable_filter_intra: bool,
-        enable_intra_edge_filter: bool,
-        enable_interintra_compound: bool,
-        enable_masked_compound: bool,
-        enable_warped_motion: bool,
-        enable_dual_filter: bool,
-        enable_order_hint: bool,
-        enable_jnt_comp: bool,
-        enable_ref_frame_mvs: bool,
-        seq_force_integer_mv: u64,
-        seq_force_screen_content_tools: u64,
-        enable_superres: bool,
-        enable_cdef: bool,
-        enable_restoration: bool,
-        color_config: ColorConfig,
-        film_grain_params_present: bool,
-    },
+pub struct TemporalDelimiter {
+    pub header: ObuHeader,
 }
 
+#[derive(Debug, Default)]
+pub struct SequenceHeader {
+    pub header: ObuHeader,
+    pub still_picture: bool,
+    pub timing_info_present: bool,
+    pub decoder_model_info_present: bool,
+    pub initial_display_delay_present: bool,
+    pub operating_points_cnt: u64,
+    pub operating_point_idc: Vec<u64>,
+    pub seq_level_idx: Vec<u64>,
+    pub seq_tier: Vec<u64>,
+    pub decoder_model_present_for_this_op: Vec<bool>,
+    pub initial_display_delay_present_for_this_op: Vec<bool>,
+    pub initial_display_delay: Vec<u64>,
+    pub max_frame_width: u64,
+    pub max_frame_height: u64,
+    pub frame_id_numbers_present: bool,
+    pub use_128x128_superblock: bool,
+    pub enable_filter_intra: bool,
+    pub enable_intra_edge_filter: bool,
+    pub enable_interintra_compound: bool,
+    pub enable_masked_compound: bool,
+    pub enable_warped_motion: bool,
+    pub enable_dual_filter: bool,
+    pub enable_order_hint: bool,
+    pub enable_jnt_comp: bool,
+    pub enable_ref_frame_mvs: bool,
+    pub seq_force_integer_mv: u64,
+    pub seq_force_screen_content_tools: u64,
+    pub enable_superres: bool,
+    pub enable_cdef: bool,
+    pub enable_restoration: bool,
+    pub color_config: ColorConfig,
+    pub film_grain_params_present: bool,
+    pub reduced_still_picture_header: bool,
+}
+
+#[derive(Debug, Default)]
+pub struct UncompressedHeader {}
+
 impl Decoder {
-    pub fn obu(&mut self, b: &mut BitStream) -> Obu {
+    pub fn obu(&mut self, b: &mut BitStream) {
         let header = ObuHeader::new(b);
         let size = if header.has_size {
             b.leb128()
@@ -122,12 +134,13 @@ impl Decoder {
 
         let obu_type = header.obu_type.clone();
 
-        let obu = match obu_type {
-            ObuType::SequenceHeader => self.sequence_header(b, header),
-            ObuType::TemporalDelimiter => {
-                b.seen_frame_header = false;
-                Obu::TemporalDelimiter { header }
+        match obu_type {
+            ObuType::SequenceHeader => {
+                let sh = self.sequence_header(b, header);
+                info!("{sh:?}");
+                self.sequence_header = sh;
             }
+            ObuType::TemporalDelimiter => b.seen_frame_header = false,
             ObuType::Frame => self.frame(b),
             _ => panic!("obu type not implemented: {obu_type:?}"),
         };
@@ -149,14 +162,12 @@ impl Decoder {
                 nb_bits -= 1;
             }
         }
-
-        obu
     }
 
     const SELECT_INTEGER_MV: u64 = 2;
     const SELECT_SCREEN_CONTENT_TOOLS: u64 = 2;
 
-    fn sequence_header(&mut self, b: &mut BitStream, header: ObuHeader) -> Obu {
+    fn sequence_header(&mut self, b: &mut BitStream, header: ObuHeader) -> SequenceHeader {
         let seq_profile = SeqProfile::new(b.f(3));
         let still_picture = b.f(1) != 0;
         let reduced_still_picture_header = b.f(1) != 0;
@@ -294,7 +305,7 @@ impl Decoder {
             self.order_hint_bits = if enable_order_hint { b.f(3) + 1 } else { 0 };
         }
 
-        Obu::SequenceHeader {
+        SequenceHeader {
             header,
             still_picture,
             timing_info_present,
@@ -309,6 +320,7 @@ impl Decoder {
             initial_display_delay,
             max_frame_width,
             max_frame_height,
+            frame_id_numbers_present,
             use_128x128_superblock,
             enable_filter_intra,
             enable_intra_edge_filter,
@@ -326,27 +338,124 @@ impl Decoder {
             enable_restoration: b.f(1) != 0,
             color_config: self.color_config(b, seq_profile),
             film_grain_params_present: b.f(1) != 0,
+            reduced_still_picture_header,
         }
     }
 
-    fn frame(&mut self, b: &mut BitStream) -> Obu {
-        let start = b.pos;
-        let frame_header = self.frame_header(b);
+    fn frame(&mut self, b: &mut BitStream) {
+        let _start = b.pos;
+        self.frame_header(b);
         todo!("after frame header parsing");
     }
 
-    fn frame_header(&mut self, b: &mut BitStream) -> Obu {
+    fn frame_header(&mut self, b: &mut BitStream) {
         if self.seen_frame_header {
             todo!("seen_frame_header == true");
         } else {
             self.seen_frame_header = true;
-            let uncompressed_header = self.uncompressed_header(b);
+            let _uh = self.uncompressed_header(b);
             todo!("after uncompressed header parsing");
         }
     }
 
-    fn uncompressed_header(&mut self, b: &mut BitStream) -> Obu {
+    const NUM_REF_FRAMES: u64 = 8;
+    const REFS_PER_FRAME: u64 = 7;
+
+    fn uncompressed_header(&mut self, b: &mut BitStream) -> UncompressedHeader {
+        if self.sequence_header.frame_id_numbers_present {
+            todo!("frame_id_numbers_present == true");
+        }
+
+        let all_frames = (1 << Decoder::NUM_REF_FRAMES) - 1;
+
+        let show_existing_frame: bool;
+        let frame_type: FrameType;
+        let show_frame: bool;
+        let showable_frame: bool;
+        let error_resilient_mode: bool;
+
+        if self.sequence_header.reduced_still_picture_header {
+            show_existing_frame = false;
+            frame_type = FrameType::Key;
+            self.frame_is_intra = true;
+            show_frame = true;
+            showable_frame = false;
+        } else {
+            show_existing_frame = b.f(1) != 0;
+            if show_existing_frame {
+                todo!("show_existing_frame == true");
+            }
+
+            frame_type = FrameType::new(b.f(2));
+            self.frame_is_intra =
+                matches!(frame_type, FrameType::IntraOnly) || matches!(frame_type, FrameType::Key);
+
+            show_frame = b.f(1) != 0;
+            if show_frame
+                && self.sequence_header.decoder_model_info_present
+                && todo!("decoder model info has to be parsed at this point")
+            {
+                todo!("temporal_point_info()");
+            }
+
+            showable_frame = if show_frame {
+                !matches!(frame_type, FrameType::Key)
+            } else {
+                b.f(1) != 0
+            };
+
+            error_resilient_mode = if matches!(frame_type, FrameType::Switch)
+                || (matches!(frame_type, FrameType::Key) && show_frame)
+            {
+                true
+            } else {
+                b.f(1) != 0
+            };
+        }
+
+        if matches!(frame_type, FrameType::Key) && show_frame {
+            for i in 0..Decoder::NUM_REF_FRAMES {
+                self.ref_valid[i as usize] = false;
+                self.ref_order_hint[i as usize] = false;
+            }
+
+            for i in 0..Decoder::REFS_PER_FRAME {}
+        }
+
+        let disable_cdf_update = b.f(1) != 0;
+        let allow_screen_content_tools = if self.sequence_header.seq_force_screen_content_tools
+            == Decoder::SELECT_SCREEN_CONTENT_TOOLS
+        {
+            b.f(1)
+        } else {
+            self.sequence_header.seq_force_screen_content_tools
+        };
+
+        if allow_screen_content_tools != 0 {
+            todo!("allow_screen_content_tools != 0");
+        }
+
         todo!("uncompressed_header");
+    }
+}
+
+#[derive(Debug)]
+enum FrameType {
+    Key = 0,
+    Inter = 1,
+    IntraOnly = 2,
+    Switch = 3,
+}
+
+impl FrameType {
+    fn new(val: u64) -> FrameType {
+        match val {
+            0 => FrameType::Key,
+            1 => FrameType::Inter,
+            2 => FrameType::IntraOnly,
+            3 => FrameType::Switch,
+            _ => panic!("invalid value for FrameType: {val}"),
+        }
     }
 }
 
@@ -406,6 +515,12 @@ pub enum ChromaSamplePosition {
     Reserved = 3,
 }
 
+impl Default for ChromaSamplePosition {
+    fn default() -> Self {
+        Self::Unknown
+    }
+}
+
 impl ChromaSamplePosition {
     fn new(val: u64) -> Self {
         match val {
@@ -418,7 +533,7 @@ impl ChromaSamplePosition {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ColorConfig {
     pub separate_uv_delta_q: bool,
     pub color_range: bool,

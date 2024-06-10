@@ -1,5 +1,5 @@
 use anyhow::Result;
-use tracing::info;
+use obu::SequenceHeader;
 
 use super::ivf::Ivf;
 
@@ -85,6 +85,10 @@ pub struct Decoder {
     pub num_planes: NumPlanes,
     pub order_hint_bits: u64,
     pub seen_frame_header: bool,
+    pub sequence_header: SequenceHeader,
+    pub frame_is_intra: bool,
+    pub ref_valid: [bool; 8],
+    pub ref_order_hint: [bool; 8],
 }
 
 impl Decoder {
@@ -99,8 +103,7 @@ impl Decoder {
 
     fn decode_frame(&mut self, b: &mut BitStream) {
         loop {
-            let obu = self.obu(b);
-            info!("obu: {obu:?}");
+            self.obu(b);
         }
     }
 }
