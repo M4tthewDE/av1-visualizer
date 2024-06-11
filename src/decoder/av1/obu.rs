@@ -361,6 +361,9 @@ impl Decoder {
     const NUM_REF_FRAMES: u64 = 8;
     const REFS_PER_FRAME: u64 = 7;
     const PRIMARY_REF_NONE: u64 = 7;
+    const SUPERRES_DENOM_BITS: u64 = 3;
+    const SUPERRES_DENOM_MIN: u64 = 9;
+    const SUPERRES_NUM: u64 = 8;
 
     fn uncompressed_header(&mut self, b: &mut BitStream) -> UncompressedHeader {
         if self.sequence_header.frame_id_numbers_present {
@@ -488,10 +491,47 @@ impl Decoder {
         }
 
         if self.frame_is_intra {
+            self.frame_size(b, frame_size_override);
             todo!();
         }
 
         todo!("uncompressed_header");
+    }
+
+    fn frame_size(&mut self, b: &mut BitStream, frame_size_override: bool) {
+        if frame_size_override {
+            todo!();
+        } else {
+            self.frame_width = self.sequence_header.max_frame_width;
+            self.frame_height = self.sequence_header.max_frame_height;
+        }
+
+        self.superres_params(b);
+        self.compute_image_size();
+    }
+
+    fn superres_params(&mut self, b: &mut BitStream) {
+        let use_superres = if self.sequence_header.enable_superres {
+            b.f(1) != 0
+        } else {
+            false
+        };
+
+        self.superres_denom = if use_superres {
+            b.f(Decoder::SUPERRES_DENOM_BITS) + Decoder::SUPERRES_DENOM_MIN
+        } else {
+            Decoder::SUPERRES_NUM
+        };
+
+        self.upscaled_width = self.frame_width;
+        self.frame_width = (self.upscaled_width * Decoder::SUPERRES_NUM
+            + (self.superres_denom / 2))
+            / self.superres_denom;
+    }
+
+    fn compute_image_size(&mut self) {
+        self.mi_cols = 2 * ((self.frame_width + 7) >> 3);
+        self.mi_rows = 2 * ((self.frame_height + 7) >> 3);
     }
 }
 

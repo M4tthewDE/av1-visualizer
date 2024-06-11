@@ -90,6 +90,12 @@ pub struct Decoder {
     pub ref_valid: [bool; 8],
     pub ref_order_hint: [bool; 8],
     pub order_hint: u64,
+    pub frame_width: u64,
+    pub frame_height: u64,
+    pub superres_denom: u64,
+    pub upscaled_width: u64,
+    pub mi_cols: u64,
+    pub mi_rows: u64,
 }
 
 impl Decoder {
