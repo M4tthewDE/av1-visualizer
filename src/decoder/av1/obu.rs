@@ -360,6 +360,7 @@ impl Decoder {
 
     const NUM_REF_FRAMES: u64 = 8;
     const REFS_PER_FRAME: u64 = 7;
+    const PRIMARY_REF_NONE: u64 = 7;
 
     fn uncompressed_header(&mut self, b: &mut BitStream) -> UncompressedHeader {
         if self.sequence_header.frame_id_numbers_present {
@@ -375,6 +376,7 @@ impl Decoder {
         let error_resilient_mode: bool;
 
         if self.sequence_header.reduced_still_picture_header {
+            error_resilient_mode = false;
             show_existing_frame = false;
             frame_type = FrameType::Key;
             self.frame_is_intra = true;
@@ -431,8 +433,62 @@ impl Decoder {
             self.sequence_header.seq_force_screen_content_tools
         };
 
-        if allow_screen_content_tools != 0 {
-            todo!("allow_screen_content_tools != 0");
+        let force_integer_mv = if allow_screen_content_tools != 0 {
+            if self.sequence_header.seq_force_integer_mv == Decoder::SELECT_INTEGER_MV {
+                b.f(1)
+            } else {
+                self.sequence_header.seq_force_integer_mv
+            }
+        } else if self.frame_is_intra {
+            1
+        } else {
+            0
+        };
+
+        let current_frame_id = if self.sequence_header.frame_id_numbers_present {
+            todo!("frame_id_numbers_present");
+        } else {
+            0
+        };
+
+        let frame_size_override = if matches!(frame_type, FrameType::Switch) {
+            true
+        } else if self.sequence_header.reduced_still_picture_header {
+            false
+        } else {
+            b.f(1) != 0
+        };
+
+        self.order_hint = b.f(self.order_hint_bits);
+
+        let primary_ref_frame = if self.frame_is_intra || error_resilient_mode {
+            Decoder::PRIMARY_REF_NONE
+        } else {
+            b.f(3)
+        };
+
+        if self.sequence_header.decoder_model_info_present {
+            todo!();
+        }
+
+        let allow_high_precision_mv = false;
+        let use_ref_frame_mvs = false;
+        let allow_intrabc = false;
+
+        let refresh_frame_flags = if matches!(frame_type, FrameType::Switch)
+            || (matches!(frame_type, FrameType::Key) && show_frame)
+        {
+            all_frames
+        } else {
+            b.f(8)
+        };
+
+        if !self.frame_is_intra || refresh_frame_flags != all_frames {
+            todo!();
+        }
+
+        if self.frame_is_intra {
+            todo!();
         }
 
         todo!("uncompressed_header");

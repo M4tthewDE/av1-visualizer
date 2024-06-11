@@ -89,6 +89,7 @@ pub struct Decoder {
     pub frame_is_intra: bool,
     pub ref_valid: [bool; 8],
     pub ref_order_hint: [bool; 8],
+    pub order_hint: u64,
 }
 
 impl Decoder {
