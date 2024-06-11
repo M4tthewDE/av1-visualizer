@@ -476,7 +476,7 @@ impl Decoder {
 
         let allow_high_precision_mv = false;
         let use_ref_frame_mvs = false;
-        let allow_intrabc = false;
+        let mut allow_intrabc = false;
 
         let refresh_frame_flags = if matches!(frame_type, FrameType::Switch)
             || (matches!(frame_type, FrameType::Key) && show_frame)
@@ -492,6 +492,12 @@ impl Decoder {
 
         if self.frame_is_intra {
             self.frame_size(b, frame_size_override);
+            self.render_size(b);
+
+            if allow_screen_content_tools != 0 && self.upscaled_width == self.frame_width {
+                allow_intrabc = b.f(1) != 0;
+            }
+        } else {
             todo!();
         }
 
@@ -532,6 +538,16 @@ impl Decoder {
     fn compute_image_size(&mut self) {
         self.mi_cols = 2 * ((self.frame_width + 7) >> 3);
         self.mi_rows = 2 * ((self.frame_height + 7) >> 3);
+    }
+
+    fn render_size(&mut self, b: &mut BitStream) {
+        if b.f(1) != 0 {
+            self.render_width = b.f(16) + 1;
+            self.render_height = b.f(16) + 1;
+        } else {
+            self.render_width = self.upscaled_width;
+            self.render_height = self.frame_height;
+        }
     }
 }
 

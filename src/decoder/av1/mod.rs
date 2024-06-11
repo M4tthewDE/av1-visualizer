@@ -96,6 +96,8 @@ pub struct Decoder {
     pub upscaled_width: u64,
     pub mi_cols: u64,
     pub mi_rows: u64,
+    pub render_width: u64,
+    pub render_height: u64,
 }
 
 impl Decoder {
