@@ -1,4 +1,4 @@
-use tracing::info;
+use tracing::{info, warn};
 
 use super::{BitDepth, BitStream, Decoder, NumPlanes};
 
@@ -361,9 +361,6 @@ impl Decoder {
     const NUM_REF_FRAMES: u64 = 8;
     const REFS_PER_FRAME: u64 = 7;
     const PRIMARY_REF_NONE: u64 = 7;
-    const SUPERRES_DENOM_BITS: u64 = 3;
-    const SUPERRES_DENOM_MIN: u64 = 9;
-    const SUPERRES_NUM: u64 = 8;
 
     fn uncompressed_header(&mut self, b: &mut BitStream) -> UncompressedHeader {
         if self.sequence_header.frame_id_numbers_present {
@@ -501,6 +498,25 @@ impl Decoder {
             todo!();
         }
 
+        let disabled_farme_end_update_cdf =
+            if self.sequence_header.reduced_still_picture_header || disable_cdf_update {
+                true
+            } else {
+                b.f(1) != 0
+            };
+
+        if primary_ref_frame == Decoder::PRIMARY_REF_NONE {
+            warn!("init_non_coeff_cdfs() not implemented yet");
+            warn!("setup_past_independence() not implemented yet");
+        } else {
+            todo!();
+        }
+
+        if use_ref_frame_mvs {
+            todo!();
+        }
+
+        self.tile_info(b);
         todo!("uncompressed_header");
     }
 
@@ -515,6 +531,10 @@ impl Decoder {
         self.superres_params(b);
         self.compute_image_size();
     }
+
+    const SUPERRES_DENOM_BITS: u64 = 3;
+    const SUPERRES_DENOM_MIN: u64 = 9;
+    const SUPERRES_NUM: u64 = 8;
 
     fn superres_params(&mut self, b: &mut BitStream) {
         let use_superres = if self.sequence_header.enable_superres {
@@ -548,6 +568,93 @@ impl Decoder {
             self.render_width = self.upscaled_width;
             self.render_height = self.frame_height;
         }
+    }
+
+    const MAX_TILE_WIDTH: u64 = 4096;
+    const MAX_TILE_AREA: u64 = 4096 * 2304;
+    const MAX_TILE_COLS: u64 = 64;
+    const MAX_TILE_ROWS: u64 = 64;
+
+    fn tile_info(&mut self, b: &mut BitStream) {
+        let (sb_cols, sb_rows, sb_shift) = if self.sequence_header.use_128x128_superblock {
+            (((self.mi_cols + 31) >> 5), (self.mi_rows + 31) >> 5, 5)
+        } else {
+            (((self.mi_cols + 15) >> 4), (self.mi_rows + 15) >> 4, 4)
+        };
+
+        let sb_size = sb_shift + 2;
+        let max_tile_width_sb = Decoder::MAX_TILE_WIDTH >> sb_size;
+        let max_tile_area_sb = Decoder::MAX_TILE_AREA >> (2 * sb_size);
+        let min_log2_tile_cols = Decoder::tile_log2(max_tile_width_sb, sb_cols);
+        let max_log2_tile_cols = Decoder::tile_log2(1, sb_cols.min(Decoder::MAX_TILE_COLS));
+        let max_log2_tile_rows = Decoder::tile_log2(1, sb_rows.min(Decoder::MAX_TILE_ROWS));
+        let min_log2_tiles =
+            min_log2_tile_cols.max(Decoder::tile_log2(max_tile_area_sb, sb_rows * sb_cols));
+
+        let uniform_tile_spacing = b.f(1) != 0;
+        if uniform_tile_spacing {
+            self.tile_cols_log2 = min_log2_tile_cols;
+
+            while self.tile_cols_log2 >= max_log2_tile_cols {
+                if b.f(1) != 0 {
+                    self.tile_cols_log2 += 1;
+                } else {
+                    break;
+                }
+            }
+
+            let tile_width_sb = (sb_cols + (1 << self.tile_cols_log2) - 1) >> self.tile_cols_log2;
+            let mut i = 0;
+            self.mi_col_starts = vec![0; sb_cols as usize];
+            for start_sb in (0..sb_cols).step_by(tile_width_sb as usize) {
+                self.mi_col_starts[i] = start_sb << sb_shift;
+                i += 1;
+            }
+            self.mi_col_starts[i] = self.mi_cols;
+            self.tile_cols = i as u64;
+
+            self.tile_rows_log2 = 0.max(min_log2_tiles - self.tile_cols_log2);
+            while self.tile_rows_log2 < max_log2_tile_rows {
+                if b.f(1) != 0 {
+                    self.tile_rows_log2 += 1;
+                } else {
+                    break;
+                }
+            }
+
+            let tile_height_sb = (sb_rows + (1 << self.tile_rows_log2) - 1) >> self.tile_rows_log2;
+            let mut i = 0;
+            self.mi_row_starts = vec![0; sb_rows as usize];
+            for start_sb in (0..sb_rows).step_by(tile_height_sb as usize) {
+                self.mi_row_starts[i] = start_sb << sb_shift;
+                i += 1;
+            }
+
+            self.mi_row_starts[i] = self.mi_rows;
+            self.tile_rows = i as u64;
+        } else {
+            todo!("no uniform tile spacing");
+        }
+
+        if self.tile_cols_log2 > 0 || self.tile_rows_log2 > 0 {
+            let _context_update_tile_id = b.f(self.tile_rows_log2 + self.tile_cols_log2);
+            self.tile_size_bytes = b.f(2) + 1;
+        } else {
+            let _context_update_tile_id = 0;
+        }
+    }
+
+    fn tile_log2(blk_size: u64, target: u64) -> u64 {
+        let mut k = 0;
+        loop {
+            if (blk_size << k) >= target {
+                break;
+            }
+
+            k += 1;
+        }
+
+        k
     }
 }
 

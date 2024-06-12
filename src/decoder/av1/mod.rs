@@ -98,6 +98,13 @@ pub struct Decoder {
     pub mi_rows: u64,
     pub render_width: u64,
     pub render_height: u64,
+    pub tile_cols_log2: u64,
+    pub mi_col_starts: Vec<u64>,
+    pub tile_cols: u64,
+    pub tile_rows_log2: u64,
+    pub mi_row_starts: Vec<u64>,
+    pub tile_rows: u64,
+    pub tile_size_bytes: u64,
 }
 
 impl Decoder {
