@@ -519,6 +519,14 @@ impl Decoder {
         self.tile_info(b);
         let quantization_params = self.quantization_params(b);
         self.segmentation_params(b);
+
+        let deltaq_present = if quantization_params.base_q_idx > 0 {
+            b.f(1) != 0
+        } else {
+            false
+        };
+        let deltaq_res = if deltaq_present { b.f(2) } else { 0 };
+
         todo!("uncompressed_header");
     }
 
@@ -555,7 +563,7 @@ impl Decoder {
         }
     }
 
-    fn quantization_params(&mut self, b: &mut BitStream) -> Option<QuantizationParams> {
+    fn quantization_params(&mut self, b: &mut BitStream) -> QuantizationParams {
         let base_q_idx = b.f(8);
         self.deltaq_ydc = Decoder::read_delta_q(b);
 
@@ -591,14 +599,19 @@ impl Decoder {
                 b.f(4)
             };
 
-            Some(QuantizationParams {
+            QuantizationParams {
                 base_q_idx,
                 qm_y,
                 qm_u,
                 qm_v,
-            })
+            }
         } else {
-            None
+            QuantizationParams {
+                base_q_idx: 0,
+                qm_y: 0,
+                qm_u: 0,
+                qm_v: 0,
+            }
         }
     }
 
