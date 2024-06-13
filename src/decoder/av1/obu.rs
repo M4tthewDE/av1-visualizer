@@ -557,7 +557,12 @@ impl Decoder {
                 b.f(4)
             };
 
-            Some(QuantizationParams { qm_y, qm_u, qm_v })
+            Some(QuantizationParams {
+                base_q_idx,
+                qm_y,
+                qm_u,
+                qm_v,
+            })
         } else {
             None
         }
@@ -711,6 +716,7 @@ impl Decoder {
 
 #[derive(Debug)]
 struct QuantizationParams {
+    pub base_q_idx: u64,
     pub qm_y: u64,
     pub qm_u: u64,
     pub qm_v: u64,
