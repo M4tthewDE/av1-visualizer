@@ -520,12 +520,26 @@ impl Decoder {
         let quantization_params = self.quantization_params(b);
         self.segmentation_params(b);
 
-        let deltaq_present = if quantization_params.base_q_idx > 0 {
+        let delta_q_present = if quantization_params.base_q_idx > 0 {
             b.f(1) != 0
         } else {
             false
         };
-        let deltaq_res = if deltaq_present { b.f(2) } else { 0 };
+        let delta_q_res = if delta_q_present { b.f(2) } else { 0 };
+
+        let mut delta_lf_present = false;
+        let mut delta_lf_res = 0;
+        let mut delta_lf_multi = false;
+        if delta_q_present {
+            if !allow_intrabc {
+                delta_lf_present = b.f(1) != 0;
+            }
+
+            if delta_lf_present {
+                delta_lf_res = b.f(2);
+                delta_lf_multi = b.f(1) != 0
+            }
+        }
 
         todo!("uncompressed_header");
     }
