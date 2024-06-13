@@ -518,7 +518,41 @@ impl Decoder {
 
         self.tile_info(b);
         let quantization_params = self.quantization_params(b);
+        self.segmentation_params(b);
         todo!("uncompressed_header");
+    }
+
+    const MAX_SEGMENTS: usize = 8;
+    const SEG_LVL_MAX: usize = 8;
+    const SEG_LVL_REF_FRAME: usize = 5;
+
+    fn segmentation_params(&mut self, b: &mut BitStream) {
+        if b.f(1) != 0 {
+            todo!();
+        } else {
+            self.feature_enabled = vec![vec![false; Decoder::SEG_LVL_MAX]; Decoder::MAX_SEGMENTS];
+            self.feature_data = vec![vec![0; Decoder::SEG_LVL_MAX]; Decoder::MAX_SEGMENTS];
+
+            for i in 0..Decoder::MAX_SEGMENTS {
+                for j in 0..Decoder::SEG_LVL_MAX {
+                    self.feature_enabled[i][j] = false;
+                    self.feature_data[i][j] = 0;
+                }
+            }
+        }
+
+        self.seg_id_pre_skip = false;
+        self.last_active_seg_id = 0;
+        for i in 0..Decoder::MAX_SEGMENTS {
+            for j in 0..Decoder::SEG_LVL_MAX {
+                if self.feature_enabled[i][j] {
+                    self.last_active_seg_id = i as u64;
+                    if j >= Decoder::SEG_LVL_REF_FRAME {
+                        self.seg_id_pre_skip = true;
+                    }
+                }
+            }
+        }
     }
 
     fn quantization_params(&mut self, b: &mut BitStream) -> Option<QuantizationParams> {

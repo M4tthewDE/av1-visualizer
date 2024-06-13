@@ -120,6 +120,10 @@ pub struct Decoder {
     pub deltaq_uac: i64,
     pub deltaq_vdc: i64,
     pub deltaq_vac: i64,
+    pub feature_enabled: Vec<Vec<bool>>,
+    pub feature_data: Vec<Vec<u64>>,
+    pub seg_id_pre_skip: bool,
+    pub last_active_seg_id: u64,
 }
 
 impl Decoder {
