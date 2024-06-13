@@ -28,7 +28,7 @@ impl BitStream {
         res
     }
 
-    fn f(self: &mut BitStream, n: u64) -> u64 {
+    fn f(&mut self, n: u64) -> u64 {
         let mut x: u64 = 0;
         for _ in 0..n {
             x = 2 * x + self.read_bit() as u64;
@@ -37,7 +37,7 @@ impl BitStream {
         x
     }
 
-    fn leb128(self: &mut BitStream) -> u64 {
+    fn leb128(&mut self) -> u64 {
         let mut value = 0;
 
         for i in 0..8 {
@@ -50,6 +50,16 @@ impl BitStream {
         }
 
         value
+    }
+
+    fn su(&mut self, n: u64) -> i64 {
+        let value = self.f(n) as i64;
+        let sign_mask = 1 << (n - 1);
+        if (value & sign_mask) != 0 {
+            value - 2 * sign_mask
+        } else {
+            value
+        }
     }
 }
 
@@ -105,6 +115,11 @@ pub struct Decoder {
     pub mi_row_starts: Vec<u64>,
     pub tile_rows: u64,
     pub tile_size_bytes: u64,
+    pub deltaq_ydc: i64,
+    pub deltaq_udc: i64,
+    pub deltaq_uac: i64,
+    pub deltaq_vdc: i64,
+    pub deltaq_vac: i64,
 }
 
 impl Decoder {

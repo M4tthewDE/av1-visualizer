@@ -517,7 +517,58 @@ impl Decoder {
         }
 
         self.tile_info(b);
+        let quantization_params = self.quantization_params(b);
         todo!("uncompressed_header");
+    }
+
+    fn quantization_params(&mut self, b: &mut BitStream) -> Option<QuantizationParams> {
+        let base_q_idx = b.f(8);
+        self.deltaq_ydc = Decoder::read_delta_q(b);
+
+        if matches!(self.num_planes, NumPlanes::Three) {
+            let diff_uv_delta = if self.sequence_header.color_config.separate_uv_delta_q {
+                b.f(1) != 0
+            } else {
+                false
+            };
+
+            self.deltaq_udc = Decoder::read_delta_q(b);
+            self.deltaq_uac = Decoder::read_delta_q(b);
+
+            if diff_uv_delta {
+                self.deltaq_vdc = Decoder::read_delta_q(b);
+                self.deltaq_vac = Decoder::read_delta_q(b);
+                self.deltaq_vdc = self.deltaq_udc;
+                self.deltaq_vac = self.deltaq_uac;
+            }
+        } else {
+            self.deltaq_udc = 0;
+            self.deltaq_uac = 0;
+            self.deltaq_vdc = 0;
+            self.deltaq_vac = 0;
+        }
+
+        if b.f(1) != 0 {
+            let qm_y = b.f(4);
+            let qm_u = b.f(4);
+            let qm_v = if !self.sequence_header.color_config.separate_uv_delta_q {
+                qm_u
+            } else {
+                b.f(4)
+            };
+
+            Some(QuantizationParams { qm_y, qm_u, qm_v })
+        } else {
+            None
+        }
+    }
+
+    fn read_delta_q(b: &mut BitStream) -> i64 {
+        if b.f(1) != 0 {
+            b.su(7)
+        } else {
+            0
+        }
     }
 
     fn frame_size(&mut self, b: &mut BitStream, frame_size_override: bool) {
@@ -656,6 +707,13 @@ impl Decoder {
 
         k
     }
+}
+
+#[derive(Debug)]
+struct QuantizationParams {
+    pub qm_y: u64,
+    pub qm_u: u64,
+    pub qm_v: u64,
 }
 
 #[derive(Debug)]
