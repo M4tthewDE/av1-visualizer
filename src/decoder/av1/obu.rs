@@ -579,8 +579,21 @@ impl Decoder {
         self.loop_filter_params(b, allow_intrabc);
         self.cdef_params(b, allow_intrabc);
         self.lr_params(b, allow_intrabc);
+        self.read_tx_mode(b);
 
         todo!("uncompressed_header");
+    }
+
+    fn read_tx_mode(&mut self, b: &mut BitStream) {
+        self.tx_mode = if self.coded_lossless {
+            TxMode::Only4x4
+        } else {
+            if b.f(1) != 0 {
+                TxMode::Select
+            } else {
+                TxMode::Largest
+            }
+        }
     }
 
     const RESTORE_NONE: u64 = 0;
@@ -1117,4 +1130,18 @@ pub struct CdefParams {
     pub cdef_y_sec_strength: Vec<u64>,
     pub cdef_uv_pri_strength: Vec<u64>,
     pub cdef_uv_sec_strength: Vec<u64>,
+}
+
+#[derive(Debug)]
+pub enum TxMode {
+    Invalid = -1,
+    Only4x4 = 0,
+    Largest = 1,
+    Select = 2,
+}
+
+impl Default for TxMode {
+    fn default() -> Self {
+        Self::Invalid
+    }
 }

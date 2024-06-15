@@ -1,5 +1,5 @@
 use anyhow::Result;
-use obu::SequenceHeader;
+use obu::{SequenceHeader, TxMode};
 
 use super::ivf::Ivf;
 
@@ -131,6 +131,7 @@ pub struct Decoder {
     pub cdef_damping: u64,
     pub frame_restoration_type: Vec<u64>,
     pub uses_lr: bool,
+    pub tx_mode: TxMode,
 }
 
 impl Decoder {
