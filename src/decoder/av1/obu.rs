@@ -117,7 +117,22 @@ pub struct SequenceHeader {
 }
 
 #[derive(Debug, Default)]
-pub struct UncompressedHeader {}
+pub struct UncompressedHeader {
+    pub show_existing_frame: bool,
+    pub force_integer_mv: u64,
+    pub current_frame_id: u64,
+    pub allow_high_precision_mv: bool,
+    pub disabled_frame_end_update_cdf: bool,
+    pub delta_q_res: u64,
+    pub delta_lf_present: bool,
+    pub delta_lf_res: u64,
+    pub delta_lf_multi: bool,
+    pub loop_filter_params: LoopFilterParams,
+    pub cdef_params: CdefParams,
+    pub skip_mode_allowed: bool,
+    pub skip_mode_present: bool,
+    pub reduced_tx_set: bool,
+}
 
 impl Decoder {
     pub fn obu(&mut self, b: &mut BitStream) {
@@ -359,7 +374,7 @@ impl Decoder {
     }
 
     const NUM_REF_FRAMES: u64 = 8;
-    const REFS_PER_FRAME: u64 = 7;
+    pub const REFS_PER_FRAME: u64 = 7;
     const PRIMARY_REF_NONE: u64 = 7;
 
     fn uncompressed_header(&mut self, b: &mut BitStream) -> UncompressedHeader {
@@ -421,7 +436,9 @@ impl Decoder {
                 self.ref_order_hint[i as usize] = false;
             }
 
-            for i in 0..Decoder::REFS_PER_FRAME {}
+            for i in 0..Decoder::REFS_PER_FRAME {
+                self.order_hints[Decoder::LAST_FRAME + i as usize] = false;
+            }
         }
 
         let disable_cdf_update = b.f(1) != 0;
@@ -498,7 +515,7 @@ impl Decoder {
             todo!();
         }
 
-        let disabled_farme_end_update_cdf =
+        let disabled_frame_end_update_cdf =
             if self.sequence_header.reduced_still_picture_header || disable_cdf_update {
                 true
             } else {
@@ -576,8 +593,8 @@ impl Decoder {
         }
 
         self.all_lossless = self.coded_lossless && (self.frame_width == self.upscaled_width);
-        self.loop_filter_params(b, allow_intrabc);
-        self.cdef_params(b, allow_intrabc);
+        let loop_filter_params = self.loop_filter_params(b, allow_intrabc);
+        let cdef_params = self.cdef_params(b, allow_intrabc);
         self.lr_params(b, allow_intrabc);
         self.read_tx_mode(b);
         let reference_select = if self.frame_is_intra {
@@ -599,7 +616,22 @@ impl Decoder {
         self.global_motion_params();
         self.film_grain_params(show_frame, showable_frame);
 
-        todo!("uncompressed_header");
+        UncompressedHeader {
+            show_existing_frame,
+            force_integer_mv,
+            current_frame_id,
+            allow_high_precision_mv,
+            disabled_frame_end_update_cdf,
+            delta_q_res,
+            delta_lf_present,
+            delta_lf_res,
+            delta_lf_multi,
+            loop_filter_params,
+            cdef_params,
+            skip_mode_allowed,
+            skip_mode_present,
+            reduced_tx_set,
+        }
     }
 
     fn film_grain_params(&self, show_frame: bool, showable_frame: bool) {
@@ -611,7 +643,7 @@ impl Decoder {
         todo!();
     }
 
-    const LAST_FRAME: usize = 1;
+    pub const LAST_FRAME: usize = 1;
     const ALTREF_FRAME: usize = 7;
     const WARPEDMODEL_PREC_BITS: u64 = 16;
 
@@ -1177,14 +1209,14 @@ impl Decoder {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct LoopFilterParams {
     pub loop_filter_level: [u64; 4],
     pub loop_filter_sharpness: u64,
     pub loop_filter_delta_enabled: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct CdefParams {
     pub cdef_bits: u64,
     pub cdef_y_pri_strength: Vec<u64>,
