@@ -580,6 +580,11 @@ impl Decoder {
         self.cdef_params(b, allow_intrabc);
         self.lr_params(b, allow_intrabc);
         self.read_tx_mode(b);
+        let reference_select = if self.frame_is_intra {
+            false
+        } else {
+            b.f(1) != 0
+        };
 
         todo!("uncompressed_header");
     }
