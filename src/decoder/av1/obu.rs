@@ -577,8 +577,24 @@ impl Decoder {
 
         self.all_lossless = self.coded_lossless && (self.frame_width == self.upscaled_width);
         self.loop_filter_params(b, allow_intrabc);
+        self.cdef_params(b, allow_intrabc);
 
         todo!("uncompressed_header");
+    }
+
+    fn cdef_params(&mut self, _b: &mut BitStream, allow_intrabc: bool) -> CdefParams {
+        if self.coded_lossless || allow_intrabc || self.sequence_header.enable_cdef {
+            self.cdef_damping = 3;
+            return CdefParams {
+                cdef_bits: 0,
+                cdef_y_pri_strength: vec![0; 1],
+                cdef_y_sec_strength: vec![0; 1],
+                cdef_uv_pri_strength: vec![0; 1],
+                cdef_uv_sec_strength: vec![0; 1],
+            };
+        }
+
+        todo!();
     }
 
     fn loop_filter_params(&self, b: &mut BitStream, allow_intrabc: bool) -> LoopFilterParams {
@@ -1081,4 +1097,13 @@ pub struct LoopFilterParams {
     pub loop_filter_level: [u64; 4],
     pub loop_filter_sharpness: u64,
     pub loop_filter_delta_enabled: bool,
+}
+
+#[derive(Debug)]
+pub struct CdefParams {
+    pub cdef_bits: u64,
+    pub cdef_y_pri_strength: Vec<u64>,
+    pub cdef_y_sec_strength: Vec<u64>,
+    pub cdef_uv_pri_strength: Vec<u64>,
+    pub cdef_uv_sec_strength: Vec<u64>,
 }

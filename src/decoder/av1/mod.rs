@@ -128,6 +128,7 @@ pub struct Decoder {
     pub current_q_index: u64,
     pub lossless_array: Vec<bool>,
     pub all_lossless: bool,
+    pub cdef_damping: u64,
 }
 
 impl Decoder {
