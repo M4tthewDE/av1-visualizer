@@ -137,13 +137,13 @@ pub struct UncompressedHeader {
 impl Decoder {
     pub fn obu(&mut self, b: &mut BitStream) {
         let header = ObuHeader::new(b);
-        let size = if header.has_size {
+        let obu_size = if header.has_size {
             b.leb128()
         } else {
             todo!("where does sz come from?");
         };
 
-        info!("size: {size}");
+        info!("obu_size: {obu_size}");
 
         let start_position = b.pos;
 
@@ -156,19 +156,19 @@ impl Decoder {
                 self.sequence_header = sh;
             }
             ObuType::TemporalDelimiter => b.seen_frame_header = false,
-            ObuType::Frame => self.frame(b),
+            ObuType::Frame => self.frame(b, obu_size as usize),
             _ => panic!("obu type not implemented: {obu_type:?}"),
         };
 
         let current_position = b.pos;
         let payload_bits = current_position - start_position;
 
-        if size > 0
+        if obu_size > 0
             && !matches!(obu_type, ObuType::TileGroup)
             && !matches!(obu_type, ObuType::TileList)
             && !matches!(obu_type, ObuType::Frame)
         {
-            let mut nb_bits = size * 8 - payload_bits as u64;
+            let mut nb_bits = obu_size * 8 - payload_bits as u64;
             b.f(1);
             nb_bits -= 1;
 
@@ -357,10 +357,19 @@ impl Decoder {
         }
     }
 
-    fn frame(&mut self, b: &mut BitStream) {
-        let _start = b.pos;
+    fn frame(&mut self, b: &mut BitStream, sz: usize) {
+        let start_bit_pos = b.pos;
         self.frame_header(b);
-        todo!("after frame header parsing");
+        b.alignment();
+        let end_bit_pos = b.pos;
+        let header_bytes = (end_bit_pos - start_bit_pos) / 8;
+        let sz = sz - header_bytes;
+
+        let _tg = self.tile_group(b, sz);
+    }
+
+    fn tile_group(&mut self, _b: &mut BitStream, _sz: usize) {
+        todo!("tile_group");
     }
 
     fn frame_header(&mut self, b: &mut BitStream) {

@@ -61,6 +61,13 @@ impl BitStream {
             value
         }
     }
+
+    fn alignment(&mut self) {
+        while (self.pos & 7) != 0 {
+            self.f(1);
+        }
+
+    }
 }
 
 #[derive(Debug, Copy, Clone)]
