@@ -578,8 +578,19 @@ impl Decoder {
         self.all_lossless = self.coded_lossless && (self.frame_width == self.upscaled_width);
         self.loop_filter_params(b, allow_intrabc);
         self.cdef_params(b, allow_intrabc);
+        self.lr_params(b, allow_intrabc);
 
         todo!("uncompressed_header");
+    }
+
+    const RESTORE_NONE: u64 = 0;
+
+    fn lr_params(&mut self, _b: &mut BitStream, allow_intrabc: bool) {
+        if self.all_lossless || allow_intrabc || !self.sequence_header.enable_restoration {
+            self.frame_restoration_type = vec![Decoder::RESTORE_NONE; 3];
+            self.uses_lr = false;
+            return;
+        }
     }
 
     fn cdef_params(&mut self, _b: &mut BitStream, allow_intrabc: bool) -> CdefParams {
