@@ -576,8 +576,40 @@ impl Decoder {
         }
 
         self.all_lossless = self.coded_lossless && (self.frame_width == self.upscaled_width);
+        self.loop_filter_params(b, allow_intrabc);
 
         todo!("uncompressed_header");
+    }
+
+    fn loop_filter_params(&self, b: &mut BitStream, allow_intrabc: bool) -> LoopFilterParams {
+        let mut loop_filter_level = [0u64; 4];
+
+        if self.coded_lossless || allow_intrabc {
+            todo!();
+        }
+
+        loop_filter_level[0] = b.f(6);
+        loop_filter_level[1] = b.f(6);
+
+        if matches!(self.num_planes, NumPlanes::Three) {
+            if loop_filter_level[0] != 0 || loop_filter_level[1] != 0 {
+                loop_filter_level[2] = b.f(6);
+                loop_filter_level[3] = b.f(6);
+            }
+        }
+
+        let loop_filter_sharpness = b.f(3);
+        let loop_filter_delta_enabled = b.f(1) != 0;
+
+        if loop_filter_delta_enabled {
+            todo!();
+        }
+
+        LoopFilterParams {
+            loop_filter_level,
+            loop_filter_sharpness,
+            loop_filter_delta_enabled,
+        }
     }
 
     fn get_qindex(
@@ -1042,4 +1074,11 @@ impl Decoder {
             chroma_sample_position,
         }
     }
+}
+
+#[derive(Debug)]
+pub struct LoopFilterParams {
+    pub loop_filter_level: [u64; 4],
+    pub loop_filter_sharpness: u64,
+    pub loop_filter_delta_enabled: bool,
 }
