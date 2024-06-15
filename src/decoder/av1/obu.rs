@@ -587,8 +587,37 @@ impl Decoder {
         };
 
         let (skip_mode_allowed, skip_mode_present) = self.skip_mode_params(b, reference_select);
+        let allow_warped_motion = if self.frame_is_intra
+            || error_resilient_mode
+            || !self.sequence_header.enable_warped_motion
+        {
+            false
+        } else {
+            b.f(1) != 0
+        };
+        let reduced_tx_set = b.f(1) != 0;
+        self.global_motion_params();
 
         todo!("uncompressed_header");
+    }
+
+    const LAST_FRAME: usize = 1;
+    const ALTREF_FRAME: usize = 7;
+    const WARPEDMODEL_PREC_BITS: u64 = 16;
+
+    fn global_motion_params(&mut self) {
+        let mut gm_params = vec![vec![0u64; 6]; 8];
+        for r in Decoder::LAST_FRAME..=Decoder::ALTREF_FRAME {
+            self.gm_type[r] = WarpModel::Identity;
+
+            for i in 0..6 {
+                gm_params[r][i] = if i % 3 == 2 {
+                    1 << Decoder::WARPEDMODEL_PREC_BITS
+                } else {
+                    0
+                };
+            }
+        }
     }
 
     fn skip_mode_params(&self, b: &mut BitStream, reference_select: bool) -> (bool, bool) {
@@ -1163,6 +1192,21 @@ pub enum TxMode {
 }
 
 impl Default for TxMode {
+    fn default() -> Self {
+        Self::Invalid
+    }
+}
+
+#[derive(Debug)]
+pub enum WarpModel {
+    Invalid = -1,
+    Identity = 0,
+    Translation = 1,
+    Rotzoom = 2,
+    Affine = 3,
+}
+
+impl Default for WarpModel {
     fn default() -> Self {
         Self::Invalid
     }
