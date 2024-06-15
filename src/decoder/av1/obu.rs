@@ -518,7 +518,7 @@ impl Decoder {
 
         self.tile_info(b);
         let quantization_params = self.quantization_params(b);
-        self.segmentation_params(b);
+        let segmentation_enabled = self.segmentation_params(b);
 
         let delta_q_present = if quantization_params.base_q_idx > 0 {
             b.f(1) != 0
@@ -541,15 +541,70 @@ impl Decoder {
             }
         }
 
+        if primary_ref_frame == Decoder::PRIMARY_REF_NONE {
+            warn!("init_coeff_cdfs() not implemented");
+        } else {
+            todo!();
+        }
+
+        self.coded_lossless = true;
+        self.lossless_array = vec![false; Decoder::MAX_SEGMENTS];
+
+        for segment_id in 0..Decoder::MAX_SEGMENTS {
+            let qindex = self.get_qindex(
+                true,
+                segment_id,
+                segmentation_enabled,
+                delta_q_present,
+                quantization_params.base_q_idx,
+            );
+
+            self.lossless_array[segment_id] = qindex == 0
+                && self.deltaq_ydc == 0
+                && self.deltaq_uac == 0
+                && self.deltaq_udc == 0
+                && self.deltaq_vac == 0
+                && self.deltaq_vdc == 0;
+
+            if !self.lossless_array[segment_id] {
+                self.coded_lossless = false;
+            }
+
+            if quantization_params.using_qmatrix {
+                todo!();
+            }
+        }
+
+        self.all_lossless = self.coded_lossless && (self.frame_width == self.upscaled_width);
+
         todo!("uncompressed_header");
+    }
+
+    fn get_qindex(
+        &self,
+        ignore_delta_q: bool,
+        segment_id: usize,
+        segmentation_enabled: bool,
+        delta_q_present: bool,
+        base_q_idx: u64,
+    ) -> u64 {
+        if segmentation_enabled && self.feature_enabled[segment_id][Decoder::SEG_LVL_ALT_Q] {
+            todo!();
+        } else if !ignore_delta_q && delta_q_present {
+            self.current_q_index
+        } else {
+            base_q_idx
+        }
     }
 
     const MAX_SEGMENTS: usize = 8;
     const SEG_LVL_MAX: usize = 8;
     const SEG_LVL_REF_FRAME: usize = 5;
+    const SEG_LVL_ALT_Q: usize = 0;
 
-    fn segmentation_params(&mut self, b: &mut BitStream) {
-        if b.f(1) != 0 {
+    fn segmentation_params(&mut self, b: &mut BitStream) -> bool {
+        let segmentation_enabled = b.f(1) != 0;
+        if segmentation_enabled {
             todo!();
         } else {
             self.feature_enabled = vec![vec![false; Decoder::SEG_LVL_MAX]; Decoder::MAX_SEGMENTS];
@@ -575,6 +630,8 @@ impl Decoder {
                 }
             }
         }
+
+        segmentation_enabled
     }
 
     fn quantization_params(&mut self, b: &mut BitStream) -> QuantizationParams {
@@ -604,7 +661,8 @@ impl Decoder {
             self.deltaq_vac = 0;
         }
 
-        if b.f(1) != 0 {
+        let using_qmatrix = b.f(1) != 0;
+        if using_qmatrix {
             let qm_y = b.f(4);
             let qm_u = b.f(4);
             let qm_v = if !self.sequence_header.color_config.separate_uv_delta_q {
@@ -618,6 +676,7 @@ impl Decoder {
                 qm_y,
                 qm_u,
                 qm_v,
+                using_qmatrix,
             }
         } else {
             QuantizationParams {
@@ -625,6 +684,7 @@ impl Decoder {
                 qm_y: 0,
                 qm_u: 0,
                 qm_v: 0,
+                using_qmatrix,
             }
         }
     }
@@ -781,6 +841,7 @@ struct QuantizationParams {
     pub qm_y: u64,
     pub qm_u: u64,
     pub qm_v: u64,
+    pub using_qmatrix: bool,
 }
 
 #[derive(Debug)]
