@@ -134,6 +134,7 @@ pub struct Decoder {
     pub tx_mode: TxMode,
     pub gm_type: [WarpModel; 8],
     pub order_hints: [bool; Decoder::REFS_PER_FRAME as usize + Decoder::LAST_FRAME],
+    pub tile_num: u64,
 }
 
 impl Decoder {

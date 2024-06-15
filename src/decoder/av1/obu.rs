@@ -368,8 +368,14 @@ impl Decoder {
             todo!("seen_frame_header == true");
         } else {
             self.seen_frame_header = true;
-            let _uh = self.uncompressed_header(b);
-            todo!("after uncompressed header parsing");
+            let uh = self.uncompressed_header(b);
+
+            if uh.show_existing_frame {
+                todo!();
+            } else {
+                self.tile_num = 0;
+                self.seen_frame_header = true;
+            }
         }
     }
 
