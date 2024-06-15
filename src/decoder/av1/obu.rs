@@ -586,7 +586,24 @@ impl Decoder {
             b.f(1) != 0
         };
 
+        let (skip_mode_allowed, skip_mode_present) = self.skip_mode_params(b, reference_select);
+
         todo!("uncompressed_header");
+    }
+
+    fn skip_mode_params(&self, b: &mut BitStream, reference_select: bool) -> (bool, bool) {
+        let skip_mode_allowed: bool;
+        if self.frame_is_intra || !reference_select || !self.sequence_header.enable_order_hint {
+            skip_mode_allowed = false;
+        } else {
+            todo!();
+        }
+
+        if skip_mode_allowed {
+            (skip_mode_allowed, b.f(1) != 0)
+        } else {
+            (skip_mode_allowed, false)
+        }
     }
 
     fn read_tx_mode(&mut self, b: &mut BitStream) {
