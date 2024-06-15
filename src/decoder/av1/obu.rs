@@ -597,8 +597,18 @@ impl Decoder {
         };
         let reduced_tx_set = b.f(1) != 0;
         self.global_motion_params();
+        self.film_grain_params(show_frame, showable_frame);
 
         todo!("uncompressed_header");
+    }
+
+    fn film_grain_params(&self, show_frame: bool, showable_frame: bool) {
+        if !self.sequence_header.film_grain_params_present || (!show_frame && !showable_frame) {
+            warn!("reset_grain_params() is not implemented");
+            return;
+        }
+
+        todo!();
     }
 
     const LAST_FRAME: usize = 1;
