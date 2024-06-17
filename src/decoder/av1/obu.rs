@@ -132,6 +132,7 @@ pub struct UncompressedHeader {
     pub skip_mode_allowed: bool,
     pub skip_mode_present: bool,
     pub reduced_tx_set: bool,
+    pub allow_warped_motion: bool,
 }
 
 impl Decoder {
@@ -365,7 +366,7 @@ impl Decoder {
         let header_bytes = (end_bit_pos - start_bit_pos) / 8;
         let sz = sz - header_bytes;
 
-        let _tg = self.tile_group(b, sz);
+        self.tile_group(b, sz);
     }
 
     fn tile_group(&mut self, _b: &mut BitStream, _sz: usize) {
@@ -377,9 +378,10 @@ impl Decoder {
             todo!("seen_frame_header == true");
         } else {
             self.seen_frame_header = true;
-            let uh = self.uncompressed_header(b);
+            self.uh = self.uncompressed_header(b);
+            info!("{:?}", self.uh);
 
-            if uh.show_existing_frame {
+            if self.uh.show_existing_frame {
                 todo!();
             } else {
                 self.tile_num = 0;
@@ -646,6 +648,7 @@ impl Decoder {
             skip_mode_allowed,
             skip_mode_present,
             reduced_tx_set,
+            allow_warped_motion,
         }
     }
 
@@ -664,11 +667,16 @@ impl Decoder {
 
     fn global_motion_params(&mut self) {
         let mut gm_params = vec![vec![0u64; 6]; 8];
-        for r in Decoder::LAST_FRAME..=Decoder::ALTREF_FRAME {
+        for (r, param) in gm_params
+            .iter_mut()
+            .enumerate()
+            .take(Decoder::ALTREF_FRAME + 1)
+            .skip(Decoder::LAST_FRAME)
+        {
             self.gm_type[r] = WarpModel::Identity;
 
-            for i in 0..6 {
-                gm_params[r][i] = if i % 3 == 2 {
+            for (i, p) in param.iter_mut().enumerate().take(6) {
+                *p = if i % 3 == 2 {
                     1 << Decoder::WARPEDMODEL_PREC_BITS
                 } else {
                     0
@@ -678,12 +686,14 @@ impl Decoder {
     }
 
     fn skip_mode_params(&self, b: &mut BitStream, reference_select: bool) -> (bool, bool) {
-        let skip_mode_allowed: bool;
-        if self.frame_is_intra || !reference_select || !self.sequence_header.enable_order_hint {
-            skip_mode_allowed = false;
+        let skip_mode_allowed = if self.frame_is_intra
+            || !reference_select
+            || !self.sequence_header.enable_order_hint
+        {
+            false
         } else {
             todo!();
-        }
+        };
 
         if skip_mode_allowed {
             (skip_mode_allowed, b.f(1) != 0)
@@ -695,12 +705,10 @@ impl Decoder {
     fn read_tx_mode(&mut self, b: &mut BitStream) {
         self.tx_mode = if self.coded_lossless {
             TxMode::Only4x4
+        } else if b.f(1) != 0 {
+            TxMode::Select
         } else {
-            if b.f(1) != 0 {
-                TxMode::Select
-            } else {
-                TxMode::Largest
-            }
+            TxMode::Largest
         }
     }
 
@@ -712,6 +720,8 @@ impl Decoder {
             self.uses_lr = false;
             return;
         }
+
+        todo!();
     }
 
     fn cdef_params(&mut self, _b: &mut BitStream, allow_intrabc: bool) -> CdefParams {
@@ -739,11 +749,11 @@ impl Decoder {
         loop_filter_level[0] = b.f(6);
         loop_filter_level[1] = b.f(6);
 
-        if matches!(self.num_planes, NumPlanes::Three) {
-            if loop_filter_level[0] != 0 || loop_filter_level[1] != 0 {
-                loop_filter_level[2] = b.f(6);
-                loop_filter_level[3] = b.f(6);
-            }
+        if matches!(self.num_planes, NumPlanes::Three)
+            && (loop_filter_level[0] != 0 || loop_filter_level[1] != 0)
+        {
+            loop_filter_level[2] = b.f(6);
+            loop_filter_level[3] = b.f(6);
         }
 
         let loop_filter_sharpness = b.f(3);
@@ -1016,7 +1026,7 @@ impl Decoder {
 }
 
 #[derive(Debug)]
-struct QuantizationParams {
+pub struct QuantizationParams {
     pub base_q_idx: u64,
     pub qm_y: u64,
     pub qm_u: u64,
@@ -1258,9 +1268,9 @@ impl Default for TxMode {
 pub enum WarpModel {
     Invalid = -1,
     Identity = 0,
-    Translation = 1,
-    Rotzoom = 2,
-    Affine = 3,
+    // Translation = 1,
+    // Rotzoom = 2,
+    // Affine = 3,
 }
 
 impl Default for WarpModel {

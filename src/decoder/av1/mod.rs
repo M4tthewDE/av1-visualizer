@@ -1,5 +1,5 @@
 use anyhow::Result;
-use obu::{SequenceHeader, TxMode, WarpModel};
+use obu::{SequenceHeader, TxMode, UncompressedHeader, WarpModel};
 
 use super::ivf::Ivf;
 
@@ -66,7 +66,6 @@ impl BitStream {
         while (self.pos & 7) != 0 {
             self.f(1);
         }
-
     }
 }
 
@@ -142,6 +141,7 @@ pub struct Decoder {
     pub gm_type: [WarpModel; 8],
     pub order_hints: [bool; Decoder::REFS_PER_FRAME as usize + Decoder::LAST_FRAME],
     pub tile_num: u64,
+    pub uh: UncompressedHeader,
 }
 
 impl Decoder {
