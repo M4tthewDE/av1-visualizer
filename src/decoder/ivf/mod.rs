@@ -18,18 +18,6 @@ pub struct Ivf {
     pub blocks: Vec<Block>,
 }
 
-impl Display for Ivf {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "header_length: {}", self.header_length)?;
-        writeln!(f, "fourcc: {}", self.fourcc)?;
-        writeln!(f, "width: {}", self.width)?;
-        writeln!(f, "height: {}", self.height)?;
-        writeln!(f, "denominator: {}", self.denominator)?;
-        writeln!(f, "numerator: {}", self.numerator)?;
-        write!(f, "num_frame: {}", self.num_frames)
-    }
-}
-
 impl Ivf {
     #[tracing::instrument(skip_all, name = "ivf")]
     pub fn new(p: PathBuf) -> Result<Ivf> {

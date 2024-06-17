@@ -42,7 +42,9 @@ pub fn decode_mp4(p: PathBuf) -> Result<()> {
 #[tracing::instrument(skip_all)]
 pub fn decode_ivf(p: PathBuf) -> Result<()> {
     let ivf = Ivf::new(p)?;
-    info!("ivf: {}", ivf);
+    info!("fourcc: {}", ivf.fourcc);
+    info!("width: {}", ivf.width);
+    info!("height: {}", ivf.height);
     info!("block 1: {}", ivf.blocks[0]);
 
     match ivf.fourcc.as_str() {
