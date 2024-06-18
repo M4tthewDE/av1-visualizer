@@ -413,9 +413,58 @@ impl Decoder {
             self.current_q_index = self.uh.quantization_params.base_q_idx;
 
             self.init_symbol(b, tile_size);
+            self.decode_tile(b)
         }
 
         todo!("tile_group");
+    }
+
+    const FRAME_LF_COUNT: usize = 4;
+    const SGRPROJ_XQD_MID: [i64; 2] = [-32, 31];
+    const WIENER_COEFFS: usize = 3;
+    const WIENER_TAPS_MID: [i64; 3] = [3, -7, 15];
+    const BLOCK_SIZES: usize = 22;
+    const NUM_4X4_BLOCKS_WIDE: [u64; Decoder::BLOCK_SIZES] = [
+        1, 1, 2, 2, 2, 4, 4, 4, 8, 8, 8, 16, 16, 16, 32, 32, 1, 4, 2, 8, 4, 16,
+    ];
+
+    fn decode_tile(&mut self, b: &mut BitStream) {
+        self.clear_above_context();
+
+        self.delta_lf = vec![0; Decoder::FRAME_LF_COUNT];
+
+        for i in 0..Decoder::FRAME_LF_COUNT {
+            self.delta_lf[i] = 0;
+        }
+
+        self.ref_sgr_xqd = vec![vec![0; 2]; self.num_planes as usize];
+        self.ref_lr_wiener =
+            vec![vec![vec![0; Decoder::WIENER_COEFFS]; 2]; self.num_planes as usize];
+
+        for plane in 0..self.num_planes as usize {
+            for pass in 0..2 {
+                self.ref_sgr_xqd[plane][pass] = Decoder::SGRPROJ_XQD_MID[pass];
+                for i in 0..Decoder::WIENER_COEFFS {
+                    self.ref_lr_wiener[plane][pass][i] = Decoder::WIENER_TAPS_MID[i];
+                }
+            }
+        }
+
+        let sb_size = if self.sequence_header.use_128x128_superblock {
+            SubSize::Block128x128
+        } else {
+            SubSize::Block64x64
+        };
+
+        let sb_size4 = Decoder::NUM_4X4_BLOCKS_WIDE[sb_size as usize];
+
+        todo!("decode_tile");
+    }
+
+    fn clear_above_context(&mut self) {
+        self.above_level_context = 0;
+        self.above_dc_context = 0;
+        self.above_seg_pred_context = 0;
     }
 
     fn init_symbol(&mut self, b: &mut BitStream, sz: usize) {
@@ -1334,4 +1383,10 @@ impl Default for WarpModel {
     fn default() -> Self {
         Self::Invalid
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum SubSize {
+    Block64x64 = 12,
+    Block128x128 = 15,
 }
