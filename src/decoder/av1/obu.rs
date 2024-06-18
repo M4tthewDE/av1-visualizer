@@ -419,7 +419,14 @@ impl Decoder {
     }
 
     fn init_symbol(&mut self, b: &mut BitStream, sz: usize) {
-        todo!("init_symbol");
+        let num_bits = (sz * 8).min(15) as u64;
+        let buf = b.f(num_bits);
+        let padded_buf = buf << (15 - num_bits);
+        let _symbol_value = ((1 << 15) - 1) ^ padded_buf;
+        self.symbol_range = 1 << 15;
+        self.symbol_max_bits = 8 * sz as i64 - 15;
+
+        warn!("cdf copying not implemented");
     }
 
     fn frame_header(&mut self, b: &mut BitStream) {

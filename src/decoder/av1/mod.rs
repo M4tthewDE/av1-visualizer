@@ -156,6 +156,8 @@ pub struct Decoder {
     pub mi_row_end: u64,
     pub mi_col_start: u64,
     pub mi_col_end: u64,
+    pub symbol_range: u64,
+    pub symbol_max_bits: i64,
 }
 
 impl Decoder {
