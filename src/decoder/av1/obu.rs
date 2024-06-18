@@ -133,6 +133,7 @@ pub struct UncompressedHeader {
     pub skip_mode_present: bool,
     pub reduced_tx_set: bool,
     pub allow_warped_motion: bool,
+    pub quantization_params: QuantizationParams,
 }
 
 impl Decoder {
@@ -369,8 +370,56 @@ impl Decoder {
         self.tile_group(b, sz);
     }
 
-    fn tile_group(&mut self, _b: &mut BitStream, _sz: usize) {
+    fn tile_group(&mut self, b: &mut BitStream, mut sz: usize) {
+        self.num_tiles = self.tile_cols * self.tile_rows;
+        let start_bit_pos = b.pos;
+        let mut tile_start_and_end_present = false;
+
+        if self.num_tiles > 1 {
+            tile_start_and_end_present = b.f(1) != 0;
+        }
+
+        let (tg_start, tg_end) = if self.num_tiles == 1 || !tile_start_and_end_present {
+            (0, self.num_tiles - 1)
+        } else {
+            let tile_bits = self.tile_cols_log2 + self.tile_rows_log2;
+            (b.f(tile_bits), b.f(tile_bits))
+        };
+
+        b.alignment();
+        let end_bit_pos = b.pos;
+        let header_bytes = (end_bit_pos - start_bit_pos) / 8;
+        sz -= header_bytes;
+
+        for tn in tg_start..=tg_end {
+            self.tile_num = tn;
+
+            let tile_row = self.tile_num / self.tile_cols;
+            let tile_col = self.tile_num % self.tile_cols;
+            let last_tile = self.tile_num == tg_end;
+
+            let tile_size = if last_tile {
+                sz
+            } else {
+                let tile_size = b.le(self.tile_size_bytes) as usize;
+                sz -= tile_size + self.tile_size_bytes as usize;
+                tile_size
+            };
+
+            self.mi_row_start = self.mi_row_starts[tile_row as usize];
+            self.mi_row_end = self.mi_row_starts[tile_row as usize + 1];
+            self.mi_col_start = self.mi_col_starts[tile_col as usize];
+            self.mi_col_end = self.mi_row_starts[tile_col as usize + 1];
+            self.current_q_index = self.uh.quantization_params.base_q_idx;
+
+            self.init_symbol(b, tile_size);
+        }
+
         todo!("tile_group");
+    }
+
+    fn init_symbol(&mut self, b: &mut BitStream, sz: usize) {
+        todo!("init_symbol");
     }
 
     fn frame_header(&mut self, b: &mut BitStream) {
@@ -649,6 +698,7 @@ impl Decoder {
             skip_mode_present,
             reduced_tx_set,
             allow_warped_motion,
+            quantization_params,
         }
     }
 
@@ -1025,7 +1075,7 @@ impl Decoder {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct QuantizationParams {
     pub base_q_idx: u64,
     pub qm_y: u64,

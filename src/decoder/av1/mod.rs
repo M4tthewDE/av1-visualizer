@@ -67,6 +67,15 @@ impl BitStream {
             self.f(1);
         }
     }
+
+    fn le(&mut self, n: u64) -> u64 {
+        let mut t = 0;
+        for i in 0..n {
+            t += self.f(8) << (i * 8);
+        }
+
+        t
+    }
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -142,6 +151,11 @@ pub struct Decoder {
     pub order_hints: [bool; Decoder::REFS_PER_FRAME as usize + Decoder::LAST_FRAME],
     pub tile_num: u64,
     pub uh: UncompressedHeader,
+    pub num_tiles: u64,
+    pub mi_row_start: u64,
+    pub mi_row_end: u64,
+    pub mi_col_start: u64,
+    pub mi_col_end: u64,
 }
 
 impl Decoder {
