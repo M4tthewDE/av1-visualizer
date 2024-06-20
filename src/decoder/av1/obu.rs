@@ -424,7 +424,7 @@ impl Decoder {
     const WIENER_COEFFS: usize = 3;
     const WIENER_TAPS_MID: [i64; 3] = [3, -7, 15];
     const BLOCK_SIZES: usize = 22;
-    const NUM_4X4_BLOCKS_WIDE: [u64; Decoder::BLOCK_SIZES] = [
+    const NUM_4X4_BLOCKS_WIDE: [usize; Decoder::BLOCK_SIZES] = [
         1, 1, 2, 2, 2, 4, 4, 4, 8, 8, 8, 16, 16, 16, 32, 32, 1, 4, 2, 8, 4, 16,
     ];
 
@@ -458,13 +458,23 @@ impl Decoder {
 
         let sb_size4 = Decoder::NUM_4X4_BLOCKS_WIDE[sb_size as usize];
 
+        for r in (self.mi_row_start..self.mi_row_end).step_by(sb_size4) {
+            self.clear_left_context();
+        }
+
         todo!("decode_tile");
     }
 
+    fn clear_left_context(&mut self) {
+        self.left_level_context = vec![vec![0; 2]; self.mi_rows as usize - 1];
+        self.left_dc_context = vec![vec![0; 2]; self.mi_rows as usize - 1];
+        self.left_seg_pred_context = vec![0; self.mi_rows as usize - 1];
+    }
+
     fn clear_above_context(&mut self) {
-        self.above_level_context = 0;
-        self.above_dc_context = 0;
-        self.above_seg_pred_context = 0;
+        self.above_level_context = vec![vec![0; 2]; self.mi_cols as usize - 1];
+        self.above_dc_context = vec![vec![0; 2]; self.mi_cols as usize - 1];
+        self.above_seg_pred_context = vec![0; self.mi_cols as usize - 1];
     }
 
     fn init_symbol(&mut self, b: &mut BitStream, sz: usize) {

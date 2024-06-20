@@ -158,12 +158,15 @@ pub struct Decoder {
     pub mi_col_end: u64,
     pub symbol_range: u64,
     pub symbol_max_bits: i64,
-    pub above_level_context: u64,
-    pub above_dc_context: u64,
-    pub above_seg_pred_context: u64,
+    pub above_level_context: Vec<Vec<u64>>,
+    pub above_dc_context: Vec<Vec<u64>>,
+    pub above_seg_pred_context: Vec<u64>,
     pub delta_lf: Vec<u64>,
     pub ref_sgr_xqd: Vec<Vec<i64>>,
     pub ref_lr_wiener: Vec<Vec<Vec<i64>>>,
+    pub left_level_context: Vec<Vec<u64>>,
+    pub left_dc_context: Vec<Vec<u64>>,
+    pub left_seg_pred_context: Vec<u64>,
 }
 
 impl Decoder {
